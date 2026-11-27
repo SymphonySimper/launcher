@@ -29,7 +29,7 @@ object StayAwake {
         watchScreenOff(context, on)
     }
 
-    fun resume(context: Context) {
+    fun rewatchAfterRestart(context: Context) {
         if (isOn(context)) watchScreenOff(context, true)
     }
 

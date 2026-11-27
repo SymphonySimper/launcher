@@ -72,13 +72,12 @@ import com.symphonysimper.launcher.searchContacts
 import com.symphonysimper.launcher.ui.theme.pageBackground
 import com.symphonysimper.launcher.webSearch
 import com.symphonysimper.launcher.whatsApp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.withContext
 import com.symphonysimper.launcher.ui.theme.Sizes
 
 private const val COLUMNS = 4
+private const val TYPING_SETTLE_MS = 60L
 
 @Composable
 fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List<Contact>, drawer: DrawerState) {
@@ -101,8 +100,8 @@ fun rememberContacts(query: String): List<Contact> {
             contacts = emptyList()
             return@LaunchedEffect
         }
-        delay(60)
-        contacts = withContext(Dispatchers.IO) { context.searchContacts(query) }
+        delay(TYPING_SETTLE_MS)
+        contacts = context.searchContacts(query)
     }
     return contacts
 }

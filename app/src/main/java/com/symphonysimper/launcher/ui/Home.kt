@@ -13,7 +13,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.symphonysimper.launcher.calendarIntents
+import com.symphonysimper.launcher.calendarAppIntent
+import com.symphonysimper.launcher.calendarDayIntent
 import com.symphonysimper.launcher.clockIntent
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -189,10 +190,7 @@ private fun Clock(modifier: Modifier) {
                 .padding(start = DateIndent)
                 .then(calendarSource.modifier)
                 .clip(ClockTapShape)
-                .clickable {
-                    val (today, app) = calendarIntents(System.currentTimeMillis())
-                    calendarSource.open(today, app)
-                }
+                .clickable { calendarSource.open(calendarDayIntent(System.currentTimeMillis()), calendarAppIntent()) }
                 // Compose widens the touch area of small targets to 48dp, so this only sizes the highlight.
                 .padding(horizontal = ClockTapPadding, vertical = 4.dp),
         )

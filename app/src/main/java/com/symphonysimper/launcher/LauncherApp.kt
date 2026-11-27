@@ -14,7 +14,7 @@ class LauncherApp : Application() {
         prefs = Prefs(this)
         apps = AppRepository(this, prefs)
         apps.start()
-        StayAwake.resume(this)
+        StayAwake.rewatchAfterRestart(this)
     }
 
     companion object {

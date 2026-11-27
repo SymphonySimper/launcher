@@ -223,7 +223,7 @@ only for failures in `Actions.kt`, which runs outside Compose.
   at the top so wallpaper never peeks under the search bar).
 - Apps open with a clip reveal from their icon.
 - Menus fade and scale in over 160ms from where the arrow points.
-- The launcher's own screens open with `startOwn`, on a plain window in the page's colour, not the
+- The launcher's own screens open with `startWithPlainSplash`, on a plain window in the page's colour, not the
   splash screen with the launcher's icon that Android shows for app launches.
 - Settings pages crossfade.
 - Rows that move between sections (Hidden apps) glide there with `animateItem` while the rows on

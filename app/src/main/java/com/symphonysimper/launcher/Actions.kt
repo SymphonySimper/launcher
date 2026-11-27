@@ -48,7 +48,7 @@ fun Context.start(intent: Intent, options: Bundle? = null) {
     }
 }
 
-fun Context.startOwn(intent: Intent) =
+fun Context.startWithPlainSplash(intent: Intent) =
     start(intent, ActivityOptions.makeBasic().setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR).toBundle())
 
 fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
@@ -83,9 +83,10 @@ fun Context.open(intent: Intent, fallback: Intent?, view: View?, bounds: Rect?) 
 
 fun clockIntent() = Intent(AlarmClock.ACTION_SHOW_ALARMS)
 
-fun calendarIntents(now: Long) =
-    Intent(Intent.ACTION_VIEW, CalendarContract.CONTENT_URI.buildUpon().appendPath("time").appendPath(now.toString()).build()) to
-        Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR)
+fun calendarDayIntent(time: Long) =
+    Intent(Intent.ACTION_VIEW, CalendarContract.CONTENT_URI.buildUpon().appendPath("time").appendPath(time.toString()).build())
+
+fun calendarAppIntent(): Intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR)
 
 fun Context.appInfo(app: App) =
     getSystemService(LauncherApps::class.java).startAppDetailsActivity(app.component, app.user, null, null)
@@ -139,9 +140,9 @@ fun Context.expandNotifications() {
 
 fun ComponentActivity.followPortraitOnly() {
     val prefs = LauncherApp.instance.prefs
-    lifecycleScope.launch {
-        snapshotFlow { prefs.portraitOnly }.collect { portrait ->
-            requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
+    fun follow(portrait: Boolean) {
+        requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
+    follow(prefs.portraitOnly)
+    lifecycleScope.launch { snapshotFlow { prefs.portraitOnly }.collect(::follow) }
 }

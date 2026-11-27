@@ -656,7 +656,7 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     val shown = if (images) Preview.Photo(slotDark, if (slotDark) darkImage else lightImage) else Preview.Pebbles(showDark)
     val previewDark = when (shown) {
         is Preview.Pebbles -> shown.dark
-        is Preview.Photo -> if (shown.image != null) shown.image.isMostlyDark() else MaterialTheme.colorScheme.isDark
+        is Preview.Photo -> if (shown.image != null) shown.image.isDarkUnderStatusBar() else MaterialTheme.colorScheme.isDark
     }
     SystemBarIcons(lightIcons = previewDark)
 
@@ -854,7 +854,7 @@ private fun rememberWallpaperImage(dark: Boolean, version: Int, size: IntSize): 
     return image
 }
 
-private fun ImageBitmap.isMostlyDark(): Boolean {
+private fun ImageBitmap.isDarkUnderStatusBar(): Boolean {
     val bitmap = asAndroidBitmap()
     var sum = 0f
     var n = 0
