@@ -4,10 +4,18 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile)
 }
 
+fun git(vararg args: String): String? = runCatching {
+    providers.exec { commandLine("git", *args); environment("TZ", "UTC") }.standardOutput.asText.get().trim()
+}.getOrNull()
+
 /** Commits up to HEAD; 1 outside a git checkout. Needs full history (CI checks out with fetch-depth 0). */
-val commitCount: Int = runCatching {
-    providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }.standardOutput.asText.get().trim().toInt()
-}.getOrDefault(1)
+val commitCount: Int = git("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
+
+/**
+ * HEAD's commit date in UTC, so building the same commit twice gives the same version, and commits
+ * made in different time zones (locally, or by GitHub when merging) never date backwards.
+ */
+val commitDate: String = git("log", "-1", "--format=%cd", "--date=format-local:%Y.%m.%d") ?: "0000.00.00"
 
 android {
     namespace = "com.symphonysimper.launcher"
@@ -23,7 +31,8 @@ android {
         targetSdk = 37
         // Every commit raises the version, so any newer build (local or released) installs over an older one.
         versionCode = commitCount
-        versionName = "1.0.$commitCount"
+        // Calendar versioning: the commit's date, then the commit count so same-day releases differ.
+        versionName = "$commitDate.$commitCount"
     }
 
     signingConfigs {

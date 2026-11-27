@@ -14,7 +14,8 @@ git push origin main:release
 ```
 
 The Release workflow then builds a signed APK and publishes it as a GitHub release. The version is
-`1.0.<commit count>`, so every release installs over the one before it. Signing uses the secrets
+`<commit date>.<commit count>` (like `2026.11.27.412`), and the count makes every release install
+over the one before it. Signing uses the secrets
 listed at the top of [release.yml](.github/workflows/release.yml).
 
 ## Thanks
