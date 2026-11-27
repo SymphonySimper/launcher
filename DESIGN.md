@@ -135,7 +135,10 @@ Reuse these before building anything new.
 - `LauncherMenu` + `MenuEntry` (`Common.kt`): long-press menu. Each entry is its own `splitShape`
   card with a 2dp gap. With `arrow = true` it points at the item it belongs to. It fades and scales
   in from the arrow.
-- `AppIcon` (`Common.kt`): an app icon with its notification badge.
+- `AppIcon` (`Common.kt`): an app icon. On home and in the drawer (`badge = true`) apps with
+  notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
+  it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
+  Put clips and clicks in `iconModifier` so they never clip the dot. No counts, no red.
 - `rememberLaunchSource()` (`Common.kt`): put its modifier on the icon itself, so the app opens with
   a clip reveal from that icon.
 - Split rows (`Segment`, `IconSegment` in `Drawer.kt`): result rows. Where a piece opens another app

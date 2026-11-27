@@ -16,7 +16,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -48,7 +52,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,7 +60,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -102,19 +104,44 @@ fun rememberLaunchSource(): LaunchSource {
     return remember(view) { LaunchSource(view) }
 }
 
+/**
+ * An app's icon. With [badge] on, apps with notifications get a dot at the top end in the theme's
+ * primary colour, with a thin notch cut into the icon around it so it reads on any background.
+ * [iconModifier] goes on the icon under the dot (e.g. a squircle clip and click), so clipping the
+ * icon never clips the dot.
+ */
 @Composable
-fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier) {
+fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier, iconModifier: Modifier = Modifier, badge: Boolean = false) {
     val prefs = LauncherApp.instance.prefs
-    val count = if (prefs.badges) Badges.counts[app.pkg] ?: 0 else 0
-    Box(modifier) {
-        Image(app.icon, contentDescription = null, modifier = Modifier.size(size))
-        if (count > 0) {
-            Badge(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)) {
-                Text(if (count > 99) "99+" else count.toString())
-            }
-        }
+    val dot = badge && prefs.badges && (Badges.counts[app.pkg] ?: 0) > 0
+    val color = MaterialTheme.colorScheme.primary
+    Box(
+        modifier.drawWithContent {
+            drawContent()
+            if (dot) drawCircle(color, DotRadius * this.size.width, dotCenter())
+        },
+    ) {
+        Image(
+            app.icon,
+            contentDescription = null,
+            modifier = iconModifier
+                .size(size)
+                // Its own layer, so the notch clears the icon only and shows what's behind.
+                .graphicsLayer { compositingStrategy = if (dot) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
+                .drawWithContent {
+                    drawContent()
+                    if (dot) drawCircle(Color.Black, (DotRadius + DotGap) * this.size.width, dotCenter(), blendMode = BlendMode.Clear)
+                },
+        )
     }
 }
+
+// Fractions of the icon's width, so the dot scales with it: 14dp across with a 2.5dp notch on a 56dp
+// icon. It sits over the squircle's corner but inside the icon's bounds, where nothing can clip it.
+private const val DotRadius = 0.125f
+private const val DotGap = 0.045f
+
+private fun DrawScope.dotCenter() = Offset(size.width * (1 - DotRadius), size.height * DotRadius)
 
 @Composable
 fun keyboardOpen(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0

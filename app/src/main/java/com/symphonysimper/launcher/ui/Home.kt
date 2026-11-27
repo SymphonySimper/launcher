@@ -74,8 +74,9 @@ fun Home(
                 dock.forEach { app ->
                     val source = rememberLaunchSource()
                     AppIcon(
-                        app, Sizes.AppIcon,
-                        Modifier.then(source.modifier).clip(SquircleShape).combinedClickable(onClick = { source.launch(app) }),
+                        app, Sizes.AppIcon, source.modifier,
+                        iconModifier = Modifier.clip(SquircleShape).combinedClickable(onClick = { source.launch(app) }),
+                        badge = true,
                     )
                 }
             }

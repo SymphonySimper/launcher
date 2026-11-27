@@ -261,7 +261,7 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppIcon(app, Sizes.AppIcon, source.modifier)
+            AppIcon(app, Sizes.AppIcon, source.modifier, badge = true)
             Spacer(Modifier.height(8.dp))
             Text(
                 app.label,
