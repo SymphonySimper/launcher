@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -53,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.symphonysimper.launcher.App
@@ -79,12 +83,12 @@ private const val COLUMNS = 4
 @Composable
 fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List<Contact>, drawer: DrawerState) {
     Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))) {
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                if (query.isBlank()) AppGrid(apps, drawer)
-                else Results(query, appResults, contacts)
-            }
-            Spacer(Modifier.height(searchBarSpace()))
+        // Lists run to the bottom edge and scroll behind the floating search bar; this padding only
+        // keeps their last items clear of it once scrolled to the end.
+        val bottom = WindowInsets.systemBars.union(WindowInsets.ime).asPaddingValues().calculateBottomPadding() + searchBarSpace()
+        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
+            if (query.isBlank()) AppGrid(apps, drawer, bottom)
+            else Results(query, appResults, contacts, bottom)
         }
     }
 }
@@ -107,7 +111,7 @@ fun rememberContacts(query: String): List<Contact> {
 }
 
 @Composable
-private fun AppGrid(apps: List<App>, drawer: DrawerState) {
+private fun AppGrid(apps: List<App>, drawer: DrawerState, bottom: Dp) {
     val grid = rememberLazyGridState()
     // Each time the drawer finishes closing, the grid goes back to the top for next time.
     LaunchedEffect(drawer) {
@@ -117,7 +121,7 @@ private fun AppGrid(apps: List<App>, drawer: DrawerState) {
         columns = GridCells.Fixed(COLUMNS),
         state = grid,
         modifier = Modifier.fillMaxSize().nestedScroll(drawer.pullToClose),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = bottom + 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(apps, key = { it.key }) { AppCell(it) }
@@ -126,13 +130,13 @@ private fun AppGrid(apps: List<App>, drawer: DrawerState) {
 
 /** Results sit at the bottom: web search on top, then contacts, then apps nearest the thumb. */
 @Composable
-private fun Results(query: String, apps: List<App>, contacts: List<Contact>) {
+private fun Results(query: String, apps: List<App>, contacts: List<Contact>, bottom: Dp) {
     val context = LocalContext.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier
                 .verticalScroll(rememberScrollState(), reverseScrolling = true)
-                .padding(horizontal = 12.dp),
+                .padding(start = 12.dp, end = 12.dp, bottom = bottom),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             WebRow(query, highlight = apps.isEmpty() && contacts.isEmpty())
