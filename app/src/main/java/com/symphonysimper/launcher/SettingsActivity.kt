@@ -243,13 +243,12 @@ private fun Lead(icon: ImageVector) {
 }
 
 @Composable
-private fun NavRow(i: Int, n: Int, icon: ImageVector, title: String, summary: String? = null, onClick: () -> Unit) {
+private fun NavRow(i: Int, n: Int, icon: ImageVector, title: String, onClick: () -> Unit) {
     SegmentedListItem(
         onClick = onClick,
         shapes = ListItemDefaults.segmentedShapes(i, n),
         colors = itemColors,
         leadingContent = { Lead(icon) },
-        supportingContent = summary?.let { { Text(it, maxLines = 1) } },
         trailingContent = { Icon(Ic.chevron, null) },
     ) { Title(title) }
 }
@@ -288,7 +287,6 @@ private fun MonoSwitch(checked: Boolean) = Switch(
 private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
-    val repo = LauncherApp.instance.apps
     val notify = LocalNotify.current
 
     @Suppress("UNUSED_EXPRESSION") resumes // re-read the checks below after returning from system screens
@@ -325,9 +323,8 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                 Spacer(Modifier.height(12.dp))
             }
             Group {
-                val dockNames = prefs.dock.mapNotNull { repo.find(it)?.label }.joinToString(", ")
-                NavRow(0, 4, Ic.dock, "Dock", dockNames.ifEmpty { "Empty" }) { open(Page.Dock) }
-                NavRow(1, 4, Ic.hide, "Hidden apps", "${prefs.hidden.size} hidden") { open(Page.Hidden) }
+                NavRow(0, 4, Ic.dock, "Dock") { open(Page.Dock) }
+                NavRow(1, 4, Ic.hide, "Hidden apps") { open(Page.Hidden) }
                 SwitchRow(2, 4, "Notification badges", prefs.badges && badgeAccess, { on ->
                     prefs.badges = on
                     if (on && !badgeAccess) {
@@ -339,13 +336,12 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                         )
                     }
                 }, leading = { Lead(Ic.bell) })
-                NavRow(3, 4, Ic.image, "Wallpaper", if (prefs.wallpaperImages) "My images" else "Generated") {
+                NavRow(3, 4, Ic.image, "Wallpaper") {
                     open(Page.Wallpaper)
                 }
             }
             Group("Search") {
-                val engine = if (prefs.engine == "custom") "Custom" else ENGINES[prefs.engine]?.first ?: "Google"
-                NavRow(0, 3, Ic.globe, "Search engine", engine) { open(Page.Engine) }
+                NavRow(0, 3, Ic.globe, "Search engine") { open(Page.Engine) }
                 SwitchRow(1, 3, "Play Store button", prefs.playStore, { prefs.playStore = it }, leading = { Lead(Ic.play) })
                 SwitchRow(2, 3, "Contacts", prefs.contacts && contactsAccess, { on ->
                     if (on && !contactsAccess) {

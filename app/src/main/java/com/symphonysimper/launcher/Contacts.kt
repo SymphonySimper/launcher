@@ -13,7 +13,6 @@ class Contact(
     val lookupKey: String,
     val name: String,
     val phone: String?,
-    val phoneLabel: String?,
     /** Row WhatsApp adds to the contact; null when the person isn't on WhatsApp. */
     val whatsAppDataId: Long?,
 )
@@ -38,13 +37,13 @@ fun Context.searchContacts(query: String, limit: Int = 4): List<Contact> {
     }
     if (bases.isEmpty()) return emptyList()
 
-    val phones = HashMap<Long, Pair<String, String?>>()
+    val phones = HashMap<Long, String>()
     val primary = HashSet<Long>()
     val whatsApp = HashMap<Long, Long>()
     val ids = bases.joinToString(",") { it.id.toString() }
     contentResolver.query(
         Data.CONTENT_URI,
-        arrayOf(Data.CONTACT_ID, Data.MIMETYPE, Data._ID, Phone.NUMBER, Phone.TYPE, Phone.LABEL, Data.IS_SUPER_PRIMARY),
+        arrayOf(Data.CONTACT_ID, Data.MIMETYPE, Data._ID, Phone.NUMBER, Data.IS_SUPER_PRIMARY),
         "${Data.CONTACT_ID} IN ($ids) AND ${Data.MIMETYPE} IN (?, ?)",
         arrayOf(Phone.CONTENT_ITEM_TYPE, WHATSAPP_MIME),
         null,
@@ -56,14 +55,13 @@ fun Context.searchContacts(query: String, limit: Int = 4): List<Contact> {
                 continue
             }
             val number = c.getString(3) ?: continue
-            val isPrimary = c.getInt(6) != 0
+            val isPrimary = c.getInt(4) != 0
             if (contactId in phones && (!isPrimary || contactId in primary)) continue
-            val label = Phone.getTypeLabel(resources, c.getInt(4), c.getString(5)).toString()
-            phones[contactId] = number to label
+            phones[contactId] = number
             if (isPrimary) primary += contactId
         }
     }
     return bases.map { b ->
-        Contact(b.id, b.lookup, b.name, phones[b.id]?.first, phones[b.id]?.second, whatsApp[b.id])
+        Contact(b.id, b.lookup, b.name, phones[b.id], whatsApp[b.id])
     }
 }

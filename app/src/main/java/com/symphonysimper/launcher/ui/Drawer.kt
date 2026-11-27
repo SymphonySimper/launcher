@@ -2,6 +2,7 @@ package com.symphonysimper.launcher.ui
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.telecom.TelecomManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,7 +56,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -167,7 +167,7 @@ private fun AppGrid(apps: List<App>, onClose: () -> Unit) {
     }
 }
 
-/** Results sit at the bottom, nearest the search field: contacts, apps, then the web search row. */
+/** Results sit at the bottom: web search on top, then contacts, then apps nearest the thumb. */
 @Composable
 private fun Results(query: String, apps: List<App>, contacts: List<Contact>) {
     val context = LocalContext.current
@@ -178,13 +178,16 @@ private fun Results(query: String, apps: List<App>, contacts: List<Contact>) {
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            WebRow(query, highlight = apps.isEmpty() && contacts.isEmpty())
             if (contacts.isNotEmpty()) {
                 val whatsApp = rememberAppIcon("com.whatsapp")
+                val phone = rememberAppIcon(remember { context.getSystemService(TelecomManager::class.java).defaultDialerPackage })
                 Column(verticalArrangement = Arrangement.spacedBy(SplitGap)) {
                     contacts.forEachIndexed { i, contact ->
                         ContactRow(
                             contact = contact,
                             whatsAppIcon = whatsApp,
+                            phoneIcon = phone,
                             highlight = apps.isEmpty() && i == 0,
                             top = i == 0,
                             bottom = i == contacts.lastIndex,
@@ -201,7 +204,6 @@ private fun Results(query: String, apps: List<App>, contacts: List<Contact>) {
                     repeat(COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
-            WebRow(query, highlight = apps.isEmpty() && contacts.isEmpty())
         }
     }
 }
@@ -238,14 +240,14 @@ private fun Segment(
 
 /** Icon-only end piece of a split row (Play Store, WhatsApp, Call). */
 @Composable
-private fun IconSegment(shape: Shape, width: Dp, onClick: () -> Unit, content: @Composable () -> Unit) {
+private fun IconSegment(shape: Shape, highlight: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Box(
         Modifier
-            .width(width)
+            .width(64.dp)
             .fillMaxSize()
             .clip(shape)
-            .background(colors.surfaceBright)
+            .background(if (highlight) colors.secondaryContainer else colors.surfaceBright)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
@@ -266,7 +268,7 @@ private fun WebRow(query: String, highlight: Boolean) {
     val playStore = prefs.playStore
     Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
         if (playStore) {
-            IconSegment(splitShape(end = false), 64.dp, onClick = { context.playStoreSearch(query) }) {
+            IconSegment(splitShape(end = false), highlight, onClick = { context.playStoreSearch(query) }) {
                 if (store != null) Image(store, "Search Play Store", Modifier.size(30.dp))
                 else Icon(Ic.play, "Search Play Store")
             }
@@ -331,6 +333,7 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
 private fun ContactRow(
     contact: Contact,
     whatsAppIcon: ImageBitmap?,
+    phoneIcon: ImageBitmap?,
     highlight: Boolean,
     top: Boolean,
     bottom: Boolean,
@@ -344,27 +347,23 @@ private fun ContactRow(
     Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
         Segment(splitShape(top, bottom, end = !hasWhatsApp && !hasCall), onOpen, Modifier.weight(1f), highlight) {
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(40)).background(colors.primaryContainer),
+                Modifier.size(40.dp).clip(RoundedCornerShape(40)).background(if (highlight) colors.surfaceBright else colors.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(contact.name.take(1).uppercase(), color = colors.onPrimaryContainer, style = MaterialTheme.typography.titleMedium)
             }
-            Column {
-                Text(contact.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                contact.phoneLabel?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, maxLines = 1)
-                }
-            }
+            Text(contact.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (hasWhatsApp) {
-            IconSegment(splitShape(top, bottom, start = false, end = !hasCall), 64.dp, onWhatsApp) {
+            IconSegment(splitShape(top, bottom, start = false, end = !hasCall), highlight, onWhatsApp) {
                 if (whatsAppIcon != null) Image(whatsAppIcon, "WhatsApp", Modifier.size(32.dp))
                 else Icon(Ic.chat, "WhatsApp", tint = colors.onSurface)
             }
         }
         if (hasCall) {
-            IconSegment(splitShape(top, bottom, start = false), 64.dp, onCall) {
-                Icon(Ic.phone, "Call", tint = colors.onSurface)
+            IconSegment(splitShape(top, bottom, start = false), highlight, onCall) {
+                if (phoneIcon != null) Image(phoneIcon, "Call", Modifier.size(32.dp))
+                else Icon(Ic.phone, "Call", tint = colors.onSurface)
             }
         }
     }
