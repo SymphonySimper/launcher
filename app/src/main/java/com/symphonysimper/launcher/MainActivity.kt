@@ -146,7 +146,6 @@ private fun LauncherRoot(resetSignal: Int) {
         SearchField(
             value = query,
             onValueChange = { query = it },
-            placeholder = "Search apps, contacts, web",
             onSearch = ::onEnter,
             focusRequester = searchFocus,
             color = MaterialTheme.colorScheme.surfaceBright,

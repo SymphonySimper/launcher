@@ -438,7 +438,7 @@ private fun AppListPage(title: String, onBack: () -> Unit, list: LazyListScope.(
     PageScaffold(
         title, onBack,
         bottom = {
-            SearchField(query, { query = it }, "Search apps", Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp))
+            SearchField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp))
         },
     ) {
         LazyColumn(

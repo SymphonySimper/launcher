@@ -98,7 +98,6 @@ fun searchBarSpace(): Dp = 10.dp + 56.dp + searchBarBottom()
 fun SearchField(
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester = FocusRequester(),
     onSearch: () -> Unit = {},
@@ -127,10 +126,7 @@ fun SearchField(
                     Icon(Ic.search, null, tint = colors.onSurfaceVariant)
                     Spacer(Modifier.width(14.dp))
                 }
-                Box(Modifier.weight(1f)) {
-                    if (value.isEmpty()) Text(placeholder, color = colors.onSurfaceVariant, maxLines = 1)
-                    field()
-                }
+                Box(Modifier.weight(1f)) { field() }
                 if (value.isNotEmpty()) {
                     IconButton(onClick = { onValueChange("") }, shapes = IconButtonDefaults.shapes()) { Icon(Ic.close, "Clear") }
                 } else {
