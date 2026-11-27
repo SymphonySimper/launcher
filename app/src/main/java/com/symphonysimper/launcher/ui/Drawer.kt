@@ -118,13 +118,15 @@ fun Drawer(
                 if (query.isBlank()) AppGrid(apps, onClose)
                 else Results(query, appResults, contacts)
             }
+            // Extra room above the gesture bar, not needed when the keyboard is up.
+            val keyboard = WindowInsets.ime.getBottom(LocalDensity.current) > 0
             SearchField(
                 value = query,
                 onValueChange = onQueryChange,
                 placeholder = "Search apps, contacts, web",
                 focusRequester = focus,
                 onSearch = ::onEnter,
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = if (keyboard) 10.dp else 24.dp),
             )
         }
     }
