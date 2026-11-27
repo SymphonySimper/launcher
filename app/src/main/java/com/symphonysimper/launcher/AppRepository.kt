@@ -82,7 +82,8 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
 
     private fun load(): List<App> {
         val density = context.resources.displayMetrics.densityDpi
-        val sizePx = (Sizes.AppIcon.value * context.resources.displayMetrics.density).toInt()
+        // Rendered at the largest size shown (the drawer's) and scaled down for the dock.
+        val sizePx = (Sizes.DrawerIcon.value * context.resources.displayMetrics.density).toInt()
         val collator = Collator.getInstance()
         return launcherApps.getActivityList(null, Process.myUserHandle())
             .map { info ->

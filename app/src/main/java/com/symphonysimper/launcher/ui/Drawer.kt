@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.Contact
@@ -121,8 +122,8 @@ private fun AppGrid(apps: List<App>, drawer: DrawerState, bottom: Dp) {
         columns = GridCells.Fixed(COLUMNS),
         state = grid,
         modifier = Modifier.fillMaxSize().nestedScroll(drawer.pullToClose),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = bottom + 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 24.dp, bottom = bottom + 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(apps, key = { it.key }) { AppCell(it) }
     }
@@ -261,15 +262,16 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppIcon(app, Sizes.AppIcon, source.modifier, badge = true)
-            Spacer(Modifier.height(8.dp))
+            AppIcon(app, Sizes.DrawerIcon, source.modifier, badge = true)
+            Spacer(Modifier.height(10.dp))
             Text(
                 app.label,
-                style = MaterialTheme.typography.labelMedium,
+                // No extra letter spacing, so longer names fit before they're cut off.
+                style = MaterialTheme.typography.bodyMedium.copy(letterSpacing = 0.sp),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier.padding(horizontal = 2.dp),
             )
         }
         if (menu) {
