@@ -149,10 +149,11 @@ Reuse these before building anything new.
 - `LauncherMenu` + `MenuEntry` (`Common.kt`): long-press menu. Each entry is its own `splitShape`
   card with a 2dp gap. With `arrow = true` it points at the item it belongs to. It fades and scales
   in from the arrow. A quick action can sit above the group as a `pill`: a fully rounded card of the
-  same width, 8dp above, its icon and label centred 8dp apart. While that action is on, the pill is
-  `secondaryContainer` with `onSecondaryContainer` content.
-  Home's menu (long-press empty space) is the Stay awake pill ("Turn off Stay awake" while it's on)
-  over Launcher settings and System settings.
+  same width, 8dp above, its icon and label lined up with the rows below. It's a toggle:
+  `surfaceBright` with an outlined icon while off, filled `primary` with `onPrimary` content and a
+  filled icon while on, with the same label in both states, read out as a switch.
+  Home's menu (long-press empty space) is the Stay awake pill over Launcher settings and System
+  settings.
 - `AppIcon` (`Common.kt`): an app icon. On home and in the drawer (`badge = true`) apps with
   notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
   it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
@@ -237,7 +238,9 @@ every device. Turned off, they follow auto-rotate like any app. Layouts must sti
 ## Writing
 
 - Sentence case everywhere: "Hidden apps", "Set as default launcher".
-- Short, plain labels. Buttons and menu items are verbs: "Add app", "Hide", "Turn off".
+- Short, plain labels. Buttons and menu items are verbs: "Add app", "Hide", "Turn off". Toggles keep
+  one label (the thing they switch) and show whether it's on with their fill, and an outlined icon
+  that fills in.
 - Messages say what happened in a few words: "Settings saved", "Couldn't use that image",
   "That isn't a launcher backup". No "successfully", no error codes.
 - Name things the way the system does (Wallpaper & style, Quick Settings, Notification badges).

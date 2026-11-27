@@ -130,8 +130,10 @@ fun Home(
                     ),
                     arrow = false,
                     onDismiss = { menuAt = null },
-                    pill = if (stayAwake.on) MenuEntry(Ic.coffee, "Turn off Stay awake") { stayAwake.set(false) }
-                    else MenuEntry(Ic.coffee, "Stay awake") { stayAwake.set(true) },
+                    // The fill and the icon show whether it's on, so the label stays the same.
+                    pill = MenuEntry(if (stayAwake.on) Ic.coffee else Ic.coffeeOutline, "Stay awake") {
+                        stayAwake.set(!stayAwake.on)
+                    },
                     pillOn = stayAwake.on,
                 )
             }

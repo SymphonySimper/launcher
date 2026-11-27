@@ -45,6 +45,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -272,8 +274,8 @@ val SplitGap = 2.dp
 
 /**
  * Lawnchair-style long-press menu, anchored to the composable it's placed in. [arrow] points at the
- * anchor. A [pill] is a quick action on its own fully rounded button above the group, tonal while
- * [pillOn].
+ * anchor. A [pill] is a quick toggle on its own fully rounded button above the group, filled with
+ * the primary colour while [pillOn].
  */
 @Composable
 fun LauncherMenu(
@@ -316,11 +318,11 @@ fun LauncherMenu(
                 val colors = MaterialTheme.colorScheme
                 MenuCard(
                     CircleShape,
-                    if (pillOn) colors.secondaryContainer else color,
+                    if (pillOn) colors.primary else color,
                     arrowUp = true.takeIf { arrow && position.below },
                     arrowX = position.arrowX,
                 ) {
-                    MenuRow(entry, onDismiss, if (pillOn) colors.onSecondaryContainer else colors.onSurface, centered = true)
+                    MenuRow(entry, onDismiss, if (pillOn) colors.onPrimary else colors.onSurface, toggle = pillOn)
                 }
                 Spacer(Modifier.height(PillGap - SplitGap * 2))
             }
@@ -387,17 +389,21 @@ private fun MenuRow(
     entry: MenuEntry,
     onDismiss: () -> Unit,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    centered: Boolean = false,
+    /** Set for a pill: read out as a switch that's on or off. */
+    toggle: Boolean? = null,
 ) {
+    val onClick = { onDismiss(); entry.onClick() }
     Row(
         Modifier
             .fillMaxWidth()
             .height(Sizes.Control)
-            .clickable { onDismiss(); entry.onClick() }
+            .then(
+                if (toggle != null) Modifier.toggleable(toggle, role = Role.Switch) { onClick() }
+                else Modifier.clickable(onClick = onClick),
+            )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        // A centred button keeps its icon close to its label, as buttons do; rows line their labels up.
-        horizontalArrangement = if (centered) Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally) else Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Icon(entry.icon, null, Modifier.size(Sizes.Icon), tint = color)
         Text(entry.text, style = MaterialTheme.typography.bodyLarge, color = color, maxLines = 1, softWrap = false)
