@@ -35,6 +35,14 @@ launcher fast, lean and idle when nothing is happening:
 - Don't use `setFixedSize` on the wallpaper surface: wallpapers must size from layout, and the crash
   resets the user's wallpaper and default home app.
 
+## Code
+
+- **No comments that explain our own code.** Make names and types say it instead: an enum, not a
+  nullable `Boolean`; `suspend` on IO, not "call off the main thread". Only comment on behaviour of
+  Android or a library that the code can't show.
+- **No dead code.** Remove unused parameters, defaults every caller overrides, and branches that can't
+  run, rather than keeping them for later.
+
 ## Commit messages
 
 Use the format `<scope>: <message>`.
