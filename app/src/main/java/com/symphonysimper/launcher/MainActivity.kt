@@ -3,6 +3,9 @@ package com.symphonysimper.launcher
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Base64
+import java.io.FileDescriptor
+import java.io.PrintWriter
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -77,6 +80,24 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) resetSignal++
+    }
+
+    /**
+     * Backs up and restores settings from a computer, so testing that reinstalls the launcher can put
+     * them back. Only adb and the system may call this (it needs the DUMP permission):
+     *
+     *   adb shell dumpsys activity activity com.symphonysimper.launcher/.MainActivity export-settings > backup.json
+     *   adb shell dumpsys activity activity com.symphonysimper.launcher/.MainActivity import-settings $(base64 -w0 backup.json)
+     */
+    override fun dump(prefix: String, fd: FileDescriptor?, writer: PrintWriter, args: Array<out String>?) {
+        val prefs = LauncherApp.instance.prefs
+        when (args?.firstOrNull()) {
+            "export-settings" -> writer.println(prefs.toJson())
+            "import-settings" -> runCatching { prefs.fromJson(String(Base64.decode(args.getOrNull(1), Base64.DEFAULT))) }
+                .onSuccess { writer.println("Settings restored") }
+                .onFailure { writer.println("That isn't a launcher backup: ${it.message}") }
+            else -> super.dump(prefix, fd, writer, args)
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
