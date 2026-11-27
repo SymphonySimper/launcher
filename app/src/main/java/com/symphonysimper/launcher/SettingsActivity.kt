@@ -1,6 +1,12 @@
 package com.symphonysimper.launcher
 
 import android.Manifest
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.unit.LayoutDirection
 import android.app.NotificationManager
 import android.app.Activity
 import androidx.compose.foundation.shape.CornerSize
@@ -32,7 +38,6 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonColors
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.material3.TopAppBarDefaults
@@ -695,15 +700,17 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
-                PillGroup(Modifier.height(Sizes.ControlLarge), shape = splitPill(end = !images)) {
-                    PillToggle(Ic.sun, "Light", checked = !showDark || linked) { showDark = false }
-                    if (images) {
-                        PillToggle(
-                            Ic.link, "Same image for both", checked = linked,
-                            colors = pillColors(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary),
-                        ) { prefs.sameImage = !prefs.sameImage }
-                    }
-                    PillToggle(Ic.moon, "Dark", checked = showDark || linked) { showDark = true }
+                SlotPicker(
+                    slots = if (images) Slot.entries else listOf(Slot.Light, Slot.Dark),
+                    selected = when {
+                        linked -> Slot.Same
+                        showDark -> Slot.Dark
+                        else -> Slot.Light
+                    },
+                    joinedEnd = images,
+                ) { slot ->
+                    if (images) prefs.sameImage = slot == Slot.Same
+                    if (slot != Slot.Same) showDark = slot == Slot.Dark
                 }
                 if (images) {
                     val what = if (linked) "image" else if (slotDark) "dark image" else "light image"
@@ -742,9 +749,11 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     }
 }
 
+private val JointCorner = 4.dp
+
 private fun splitPill(start: Boolean = true, end: Boolean = true): Shape {
     val round = CornerSize(50)
-    val joint = CornerSize(4.dp)
+    val joint = CornerSize(JointCorner)
     return RoundedCornerShape(
         topStart = if (start) round else joint,
         topEnd = if (end) round else joint,
@@ -773,16 +782,58 @@ private fun RoundButton(
     ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
 }
 
+private val PillPadding = 4.dp
+
 @Composable
 private fun PillGroup(modifier: Modifier = Modifier, shape: Shape = CircleShape, content: @Composable RowScope.() -> Unit) {
     Row(
         modifier
             .shadow(FloatShadow, shape)
             .background(MaterialTheme.colorScheme.surfaceBright)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(PillPadding),
+        horizontalArrangement = Arrangement.spacedBy(PillPadding),
         content = content,
     )
+}
+
+private enum class Slot(val icon: ImageVector, val label: String) {
+    Light(Ic.sun, "Light"),
+    Same(Ic.link, "Same image for both"),
+    Dark(Ic.moon, "Dark"),
+}
+
+@Composable
+private fun SlotPicker(slots: List<Slot>, selected: Slot, joinedEnd: Boolean, onSelect: (Slot) -> Unit) {
+    val shape = splitPill(end = !joinedEnd)
+    val position = animateFloatAsState(slots.indexOf(selected).toFloat(), MaterialTheme.motionScheme.defaultSpatialSpec())
+    val highlight = MaterialTheme.colorScheme.secondaryContainer
+    val path = remember { Path() }
+    Row(
+        Modifier
+            .height(Sizes.ControlLarge)
+            .shadow(FloatShadow, shape)
+            .background(MaterialTheme.colorScheme.surfaceBright)
+            .drawBehind {
+                val last = slots.lastIndex.toFloat()
+                val at = position.value.coerceIn(0f, last)
+                val gap = PillPadding.toPx()
+                val item = Sizes.Control.toPx()
+                val start = gap + at * (item + gap)
+                val left = if (layoutDirection == LayoutDirection.Ltr) start else size.width - start - item
+                val round = CornerRadius(item / 2)
+                val end = if (joinedEnd) CornerRadius(lerp(item / 2, JointCorner.toPx(), (at - last + 1).coerceIn(0f, 1f))) else round
+                val (leftCorner, rightCorner) = if (layoutDirection == LayoutDirection.Ltr) round to end else end to round
+                path.reset()
+                path.addRoundRect(
+                    RoundRect(left, gap, left + item, size.height - gap, leftCorner, rightCorner, rightCorner, leftCorner),
+                )
+                drawPath(path, highlight)
+            }
+            .padding(PillPadding),
+        horizontalArrangement = Arrangement.spacedBy(PillPadding),
+    ) {
+        slots.forEach { slot -> PillToggle(slot.icon, slot.label, checked = slot == selected) { onSelect(slot) } }
+    }
 }
 
 @Composable
@@ -805,14 +856,11 @@ private fun SystemBarIcons(lightIcons: Boolean) {
 private val PillShapes @Composable get() = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape)
 
 @Composable
-private fun pillColors(
-    checkedColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    checkedContentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-) = ToggleButtonDefaults.colors(
+private fun pillColors(checkedColor: Color = MaterialTheme.colorScheme.secondaryContainer) = ToggleButtonDefaults.colors(
     containerColor = Color.Transparent,
     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     checkedContainerColor = checkedColor,
-    checkedContentColor = checkedContentColor,
+    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
 )
 
 @Composable
@@ -831,20 +879,14 @@ private fun RowScope.SourceButton(text: String, icon: ImageVector, checked: Bool
 }
 
 @Composable
-private fun PillToggle(
-    icon: ImageVector,
-    label: String,
-    checked: Boolean,
-    colors: ToggleButtonColors = pillColors(),
-    onClick: () -> Unit,
-) {
+private fun PillToggle(icon: ImageVector, label: String, checked: Boolean, onClick: () -> Unit) {
     ToggleButton(
         checked = checked,
         onCheckedChange = { onClick() },
         shapes = PillShapes,
-        colors = colors,
+        colors = pillColors(checkedColor = Color.Transparent),
         contentPadding = PaddingValues(0.dp),
-        modifier = Modifier.width(Sizes.Control).fillMaxHeight(),
+        modifier = Modifier.width(Sizes.Control).fillMaxHeight().semantics { role = Role.RadioButton },
     ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
 }
 

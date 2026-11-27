@@ -101,8 +101,13 @@ The user describes UI with these names:
   reference.
 - **Connected button group**: toggles inside one pill, the selected one filled with
   `secondaryContainer`. A whole group can be the leading part of a split button, e.g. the wallpaper
-  page's `[sun | link | moon]` split from `[pencil]`. Check which pieces form one block before
-  splitting things apart.
+  page's `[sun | link | moon]` slot picker split from `[pencil]`. Check which pieces form one block
+  before splitting things apart.
+- **Slot picker** (`SlotPicker`): a connected group where exactly one stop is ever chosen, so a
+  single `secondaryContainer` circle slides between the stops instead of each toggle filling its
+  own. It's drawn behind the row and moved in the draw phase. Where the group meets a split, the
+  circle's end turns to the 4dp join as it reaches the last stop. "Same image for both" is the
+  middle stop of Light · Same · Dark, not a modifier on the other two.
 
 ## Elevation
 
@@ -184,7 +189,7 @@ Reuse these before building anything new.
 - `MonoSwitch`: a Material switch with a check icon in the thumb when on. Rows use plain `onClick`,
   because the "checked" list item tints the whole row.
 - `AppListPage`: searchable app list with the search field at the bottom.
-- Wallpaper page controls: `RoundButton`, `PillGroup`, `PillToggle`, `SourceButton`. The single
+- Wallpaper page controls: `RoundButton`, `PillGroup`, `SlotPicker`, `PillToggle`, `SourceButton`. The single
   `primary` round button at the end of the bottom row is whatever needs doing: "Set wallpaper" (check)
   while Pebbles isn't the wallpaper, or "Use on lock screen too" (lock) while the lock screen has its
   own wallpaper. It hides once there's nothing to do.
