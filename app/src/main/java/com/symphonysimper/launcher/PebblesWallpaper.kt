@@ -203,10 +203,6 @@ object Pebbles {
         paint.strokeWidth = 3f
         paint.shader = fade(464f, 536f, p.top, p.bottom)
         canvas.drawCircle(296f, 500f, 36f, paint)
-        paint.style = Paint.Style.FILL
-        paint.shader = null
-        paint.color = p.top.toInt() // lavender, so the dot still shows against the blue pebble
-        canvas.drawCircle(214f, 420f, 9f, paint)
         canvas.restore()
     }
 
