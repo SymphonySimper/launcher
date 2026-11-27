@@ -18,6 +18,9 @@ object Sizes {
 
     val Icon = 24.dp
 
+    /** A chip's visible height; its touch area still grows to [MinTouch]. */
+    val Chip = 32.dp
+
     /** App icons in the dock and the drawer, the same size in both; icons are rendered at this size. */
     val AppIcon = 60.dp
 

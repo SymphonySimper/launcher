@@ -65,6 +65,7 @@ is missing, add a token there.
 | `Control` | 56dp | Buttons, toggles, menu rows, the search field. |
 | `ControlLarge` | 64dp | Search result rows and controls floating over content. |
 | `Icon` | 24dp | Icons. |
+| `Chip` | 32dp | A chip's visible height; its touch area still grows to 48dp. |
 | `AppIcon` | 60dp | App icons in the dock and the drawer, the same size in both so nothing jumps when the drawer opens (40dp inside settings rows). Icons are rendered at this size. |
 | `ThumbLift` | 40dp | Extra space under bottom floating controls, above the gesture bar. |
 
@@ -152,6 +153,13 @@ Reuse these before building anything new.
   notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
   it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
   Put clips and clicks in `iconModifier` so they never clip the dot. No counts, no red.
+  Home's menu (long-press empty space) is, from the top: Stay awake ("Turn off Stay awake" while
+  it's on), Launcher settings, System settings.
+- `StayAwakeChip` (`StayAwakeChip.kt`): a tonal chip under the date, only while Stay awake is on, so
+  home looks unchanged when it's off. `secondaryContainer` with `onSecondaryContainer` content: coffee
+  icon (18dp), "Stay awake on" in `labelLarge`, a small close icon (16dp). `Sizes.Chip` (32dp) to look
+  at, 48dp to hit. Its start lines up with the date's text. It fades and expands in, and tapping it
+  turns Stay awake off.
 - `rememberLaunchSource()` (`Common.kt`): put its modifier on the icon itself, so the app opens with
   a clip reveal from that icon.
 - Split rows (`Segment`, `IconSegment` in `Drawer.kt`): result rows. Where a piece opens another app

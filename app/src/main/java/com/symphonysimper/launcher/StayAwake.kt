@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -33,12 +34,19 @@ object StayAwake {
 
     private val prefs get() = LauncherApp.instance.prefs
 
+    /** The screen timeout setting, to watch for changes made anywhere. */
+    val timeoutUri: Uri = Settings.System.getUriFor(Settings.System.SCREEN_OFF_TIMEOUT)
+
     /** On only if we turned it on and nobody changed the timeout since. */
     fun isOn(context: Context) = prefs.stayAwake && timeout(context) == NEVER
 
+    /** Changing the screen timeout needs the "Modify system settings" permission. */
+    fun canTurnOn(context: Context) = Settings.System.canWrite(context)
+
     fun set(context: Context, on: Boolean) {
         if (on) {
-            prefs.savedTimeout = timeout(context)
+            // Never keep "never" as the timeout to go back to, or turning it off would leave the screen on.
+            timeout(context).takeIf { it != NEVER }?.let { prefs.savedTimeout = it }
             putTimeout(context, NEVER)
         } else {
             putTimeout(context, prefs.savedTimeout)

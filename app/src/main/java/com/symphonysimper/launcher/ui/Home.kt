@@ -5,6 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.text.format.DateFormat
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,6 +67,7 @@ fun Home(
     val context = LocalContext.current
     // Whether the current swipe can still pull down the shade: not once it has done so or moved the drawer.
     var canPullShade by remember { mutableStateOf(false) }
+    val stayAwake = rememberStayAwake()
     Box(
         modifier
             .fillMaxSize()
@@ -84,7 +91,17 @@ fun Home(
             ),
     ) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            Clock(Modifier.padding(start = 26.dp - ClockTapPadding, top = 36.dp))
+            Clock(Modifier.padding(start = ClockStart - ClockTapPadding, top = 36.dp))
+            // Only there while Stay awake is on, lined up with the date's text.
+            AnimatedVisibility(
+                stayAwake.on,
+                enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                    expandVertically(MaterialTheme.motionScheme.fastSpatialSpec(), expandFrom = Alignment.Top),
+                exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                    shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top),
+            ) {
+                StayAwakeChip(onTurnOff = { stayAwake.set(false) }, Modifier.padding(start = ClockStart + DateIndent))
+            }
             Spacer(Modifier.weight(1f))
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 14.dp),
@@ -106,6 +123,8 @@ fun Home(
             Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
                 LauncherMenu(
                     listOf(
+                        if (stayAwake.on) MenuEntry(Ic.coffee, "Turn off Stay awake") { stayAwake.set(false) }
+                        else MenuEntry(Ic.coffee, "Stay awake") { stayAwake.set(true) },
                         MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
                         MenuEntry(Ic.settings, "System settings", onSystemSettings),
                     ),
@@ -116,6 +135,12 @@ fun Home(
         }
     }
 }
+
+/** Where the clock's digits start. */
+private val ClockStart = 26.dp
+
+/** The date sits a little in from the clock, to line up with the digits' visible edge. */
+private val DateIndent = 3.dp
 
 /** Room around the clock and date inside their tap highlight. */
 private val ClockTapPadding = 8.dp
@@ -169,7 +194,7 @@ private fun Clock(modifier: Modifier) {
             color = color.copy(alpha = 0.8f),
             fontSize = 19.sp,
             modifier = Modifier
-                .padding(start = 3.dp)
+                .padding(start = DateIndent)
                 .then(calendarSource.modifier)
                 .clip(ClockTapShape)
                 .clickable {
