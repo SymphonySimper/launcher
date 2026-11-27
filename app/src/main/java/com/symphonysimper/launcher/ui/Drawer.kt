@@ -115,8 +115,9 @@ fun Drawer(
     Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                if (query.isBlank()) AppGrid(apps, onClose)
-                else Results(query, appResults, contacts)
+                // Opened from the home search bar: stay empty until something is typed.
+                if (query.isNotBlank()) Results(query, appResults, contacts)
+                else if (!focusSearch) AppGrid(apps, onClose)
             }
             SearchField(
                 value = query,
