@@ -148,8 +148,9 @@ private fun LauncherRoot(resetSignal: Int) {
                 alpha = p.coerceIn(0f, 1f)
                 // Fade each draw rather than an offscreen copy of the whole drawer: far less GPU work.
                 compositingStrategy = CompositingStrategy.ModulateAlpha
-                // Closed, it also moves off screen, so it can't catch touches meant for home.
-                translationY = if (p <= 0f) size.height else (1f - p) * drawer.range
+                // Closed, it also moves off screen, so it can't catch touches meant for home. It stops
+                // at the top even when the spring overshoots, or wallpaper would show under the search bar.
+                translationY = if (p <= 0f) size.height else (1f - p.coerceAtMost(1f)) * drawer.range
             },
         ) {
             Drawer(apps = visible, query = query, appResults = appResults, contacts = contacts, drawer = drawer)
