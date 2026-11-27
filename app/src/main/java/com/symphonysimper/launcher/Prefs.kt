@@ -32,6 +32,7 @@ class Prefs(context: Context) {
     var tilePrompted by bool("tile_prompted", false)
     var stayAwake by bool("stay_awake", false)
     var savedTimeout by int("saved_timeout", 60_000)
+    var notificationsAsked by bool("notifications_asked", false)
 
     fun toJson(): String {
         val json = JSONObject()
