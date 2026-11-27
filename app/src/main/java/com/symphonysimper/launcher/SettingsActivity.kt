@@ -119,6 +119,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -708,6 +709,9 @@ private fun splitPill(start: Boolean = true, end: Boolean = true): Shape {
     )
 }
 
+/** Elevation of the controls floating over the wallpaper. */
+private val FloatShadow = 3.dp
+
 /** An icon button on the system surface, for controls floating over the wallpaper. */
 @Composable
 private fun RoundButton(
@@ -723,7 +727,8 @@ private fun RoundButton(
         onClick = onClick,
         shape = shape,
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor, contentColor = contentColor),
-        modifier = Modifier.size(size),
+        // A soft shadow lifts it off the wallpaper, which can be as light as the button.
+        modifier = Modifier.size(size).shadow(FloatShadow, shape),
     ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
 }
 
@@ -732,7 +737,7 @@ private fun RoundButton(
 private fun PillGroup(modifier: Modifier = Modifier, shape: Shape = CircleShape, content: @Composable RowScope.() -> Unit) {
     Row(
         modifier
-            .clip(shape)
+            .shadow(FloatShadow, shape)
             .background(MaterialTheme.colorScheme.surfaceBright)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
