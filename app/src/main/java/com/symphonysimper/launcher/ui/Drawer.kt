@@ -183,8 +183,8 @@ private fun Modifier.segment(shape: Shape, highlight: Boolean, onClick: () -> Un
 private fun Segment(
     shape: Shape,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    highlight: Boolean = false,
+    modifier: Modifier,
+    highlight: Boolean,
     content: @Composable RowScope.() -> Unit,
 ) = Row(
     modifier.segment(shape, highlight, onClick).padding(horizontal = 16.dp),

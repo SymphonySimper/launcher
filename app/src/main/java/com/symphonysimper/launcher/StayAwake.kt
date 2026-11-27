@@ -9,7 +9,6 @@ import android.provider.Settings
 
 object StayAwake {
     private const val NEVER = Int.MAX_VALUE
-    private const val DEFAULT_TIMEOUT = 60_000
 
     private val prefs get() = LauncherApp.instance.prefs
 

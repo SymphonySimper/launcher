@@ -19,7 +19,9 @@ class Contact(
 fun Context.hasContactsPermission() =
     checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
 
-fun Context.searchContacts(query: String, limit: Int = 4): List<Contact> {
+private const val MAX_CONTACTS = 4
+
+fun Context.searchContacts(query: String): List<Contact> {
     if (query.isBlank() || !hasContactsPermission()) return emptyList()
     data class Base(val id: Long, val lookup: String, val name: String)
 
@@ -29,7 +31,7 @@ fun Context.searchContacts(query: String, limit: Int = 4): List<Contact> {
         arrayOf(Contacts._ID, Contacts.LOOKUP_KEY, Contacts.DISPLAY_NAME_PRIMARY),
         null, null, null,
     )?.use { c ->
-        while (bases.size < limit && c.moveToNext()) {
+        while (bases.size < MAX_CONTACTS && c.moveToNext()) {
             bases += Base(c.getLong(0), c.getString(1) ?: continue, c.getString(2) ?: continue)
         }
     }

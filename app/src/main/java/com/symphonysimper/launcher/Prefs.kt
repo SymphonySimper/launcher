@@ -2,9 +2,7 @@ package com.symphonysimper.launcher
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,6 +10,7 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 const val MAX_DOCK = 4
+const val DEFAULT_TIMEOUT = 60_000
 
 class Prefs(context: Context) {
     val sp: SharedPreferences = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
@@ -28,7 +27,7 @@ class Prefs(context: Context) {
     var sameImage by bool("same_image", false)
     var wallpaperVersion by int("wallpaper_version", 0)
     var stayAwake by bool("stay_awake", false)
-    var savedTimeout by int("saved_timeout", 60_000)
+    var savedTimeout by int("saved_timeout", DEFAULT_TIMEOUT)
     var portraitOnly by bool("portrait_only", true)
     var themedDock by bool("themed_dock", true)
     var themedDrawer by bool("themed_drawer", false)

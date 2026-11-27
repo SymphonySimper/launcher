@@ -268,17 +268,17 @@ private fun NavRow(i: Int, n: Int, icon: ImageVector, title: String, onClick: ()
 private fun SwitchRow(
     i: Int,
     n: Int,
+    icon: ImageVector,
     title: String,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
-    leading: (@Composable () -> Unit)? = null,
 ) {
     // Plain onClick, not the checked variant: that one tints the whole row when on.
     SegmentedListItem(
         onClick = { onChange(!checked) },
         shapes = ListItemDefaults.segmentedShapes(i, n),
         colors = itemColors,
-        leadingContent = leading,
+        leadingContent = { Lead(icon) },
         trailingContent = { MonoSwitch(checked) },
     ) { Title(title) }
 }
@@ -340,7 +340,7 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
             Group {
                 NavRow(0, 5, Ic.dock, "Dock") { open(Page.Dock) }
                 NavRow(1, 5, Ic.hide, "Hidden apps") { open(Page.Hidden) }
-                SwitchRow(2, 5, "Notification badges", prefs.badges && badgeAccess, { on ->
+                SwitchRow(2, 5, Ic.bell, "Notification badges", prefs.badges && badgeAccess, { on ->
                     prefs.badges = on
                     if (on && !badgeAccess) {
                         context.start(
@@ -350,26 +350,26 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                             ),
                         )
                     }
-                }, leading = { Lead(Ic.bell) })
+                })
                 NavRow(3, 5, Ic.image, "Wallpaper") {
                     open(Page.Wallpaper)
                 }
-                SwitchRow(4, 5, "Portrait only", prefs.portraitOnly, { prefs.portraitOnly = it }, leading = { Lead(Ic.portrait) })
+                SwitchRow(4, 5, Ic.portrait, "Portrait only", prefs.portraitOnly, { prefs.portraitOnly = it })
             }
             Group("Themed icons") {
-                SwitchRow(0, 2, "Dock", prefs.themedDock, { prefs.themedDock = it }, leading = { Lead(Ic.dock) })
-                SwitchRow(1, 2, "App drawer", prefs.themedDrawer, { prefs.themedDrawer = it }, leading = { Lead(Ic.apps) })
+                SwitchRow(0, 2, Ic.dock, "Dock", prefs.themedDock, { prefs.themedDock = it })
+                SwitchRow(1, 2, Ic.apps, "App drawer", prefs.themedDrawer, { prefs.themedDrawer = it })
             }
             Group("Search") {
                 NavRow(0, 3, Ic.globe, "Search engine") { open(Page.Engine) }
-                SwitchRow(1, 3, "Play Store button", prefs.playStore, { prefs.playStore = it }, leading = { Lead(Ic.play) })
-                SwitchRow(2, 3, "Contacts", prefs.contacts && contactsAccess, { on ->
+                SwitchRow(1, 3, Ic.play, "Play Store button", prefs.playStore, { prefs.playStore = it })
+                SwitchRow(2, 3, Ic.person, "Contacts", prefs.contacts && contactsAccess, { on ->
                     if (on && !contactsAccess) {
                         askContacts.launch(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE))
                     } else {
                         prefs.contacts = on
                     }
-                }, leading = { Lead(Ic.person) })
+                })
             }
             Group("More") {
                 NavRow(0, 2, Ic.download, "Back up settings") { export.launch("launcher-backup.json") }

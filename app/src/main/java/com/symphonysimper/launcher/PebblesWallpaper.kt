@@ -96,7 +96,6 @@ class PebblesWallpaper : WallpaperService() {
         }
 
         private fun photoFor(dark: Boolean): Bitmap? {
-            if (width == 0 || height == 0) return null
             val file = photoFile(dark)
             val key = "${file.name}:${prefs.wallpaperVersion}:$width"
             if (key == photoKey) return photo

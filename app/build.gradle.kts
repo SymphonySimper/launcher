@@ -81,5 +81,4 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
-    debugImplementation(libs.androidx.compose.ui.tooling)
 }

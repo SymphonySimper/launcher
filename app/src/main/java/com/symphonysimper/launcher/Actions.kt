@@ -66,7 +66,7 @@ fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
     }
 }
 
-fun Context.open(intent: Intent, fallback: Intent? = null, view: View? = null, bounds: Rect? = null) {
+fun Context.open(intent: Intent, fallback: Intent?, view: View?, bounds: Rect?) {
     val options = if (view != null && bounds != null) {
         ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height()).toBundle()
     } else null
@@ -136,7 +136,6 @@ fun Context.expandNotifications() {
         StatusBarManager::class.java.getMethod("expandNotificationsPanel").invoke(manager)
     }
 }
-
 
 fun ComponentActivity.followPortraitOnly() {
     val prefs = LauncherApp.instance.prefs

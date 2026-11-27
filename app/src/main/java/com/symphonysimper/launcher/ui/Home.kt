@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.symphonysimper.launcher.calendarIntents
@@ -108,7 +107,7 @@ fun Home(
                     val source = rememberLaunchSource()
                     AppIcon(
                         app, Sizes.AppIcon, source.modifier,
-                        iconModifier = Modifier.clip(SquircleShape).combinedClickable(onClick = { source.launch(app) }),
+                        iconModifier = Modifier.clip(SquircleShape).clickable { source.launch(app) },
                         badge = true,
                         themed = LauncherApp.instance.prefs.themedDock,
                     )

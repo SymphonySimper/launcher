@@ -288,13 +288,13 @@ fun LauncherMenu(
             verticalArrangement = Arrangement.spacedBy(SplitGap),
         ) {
             if (pill != null && position.below) {
-                MenuPill(pill, pillOn, color, true.takeIf { arrow }, position.arrowX, onDismiss)
+                MenuPill(pill, pillOn, color, onDismiss)
                 Spacer(Modifier.height(PillGap - SplitGap * 2))
             }
             entries.forEachIndexed { i, entry ->
                 val shape = splitShape(top = i == 0, bottom = i == entries.lastIndex)
                 val arrowUp = when {
-                    !arrow || pill != null -> null
+                    !arrow -> null
                     position.below -> true.takeIf { i == 0 }
                     else -> false.takeIf { i == entries.lastIndex }
                 }
@@ -302,16 +302,16 @@ fun LauncherMenu(
             }
             if (pill != null && !position.below) {
                 Spacer(Modifier.height(PillGap - SplitGap * 2))
-                MenuPill(pill, pillOn, color, false.takeIf { arrow }, position.arrowX, onDismiss)
+                MenuPill(pill, pillOn, color, onDismiss)
             }
         }
     }
 }
 
 @Composable
-private fun MenuPill(entry: MenuEntry, on: Boolean, color: Color, arrowUp: Boolean?, arrowX: Int, onDismiss: () -> Unit) {
+private fun MenuPill(entry: MenuEntry, on: Boolean, color: Color, onDismiss: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    MenuCard(CircleShape, if (on) colors.primary else color, arrowUp, arrowX) {
+    MenuCard(CircleShape, if (on) colors.primary else color, null, 0) {
         MenuRow(entry, onDismiss, if (on) colors.onPrimary else colors.onSurface, toggle = on)
     }
 }
