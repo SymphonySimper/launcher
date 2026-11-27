@@ -2,7 +2,23 @@ package com.symphonysimper.launcher
 
 import android.Manifest
 import android.app.NotificationManager
+import android.app.Activity
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.ui.unit.Dp
 import com.symphonysimper.launcher.ui.theme.Sizes
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.Shape
+import com.symphonysimper.launcher.ui.SplitGap
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntSize
+import androidx.core.view.WindowCompat
+import com.symphonysimper.launcher.ui.theme.isDark
 import android.app.WallpaperManager
 import android.app.role.RoleManager
 import android.content.ComponentName
@@ -12,7 +28,6 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.SnackbarHost
@@ -24,7 +39,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -40,13 +54,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +72,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -75,7 +88,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -113,6 +125,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -549,145 +562,268 @@ private fun EnginePage(onBack: () -> Unit) {
     }
 }
 
+/**
+ * The wallpaper fills the page so it can be judged as it will look. Controls float over it in the
+ * system theme: the source at the top, light / dark and image actions in a toolbar at the bottom.
+ */
 @Composable
 private fun WallpaperPage(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
     val notify = LocalNotify.current
-    var pickingDark by remember { mutableStateOf(false) }
+    var showDark by rememberSaveable { mutableStateOf(PebblesWallpaper.isDark(context)) }
+    val images = prefs.wallpaperImages
+    val linked = images && prefs.sameImage
+    // With one image for both modes it lives in the light slot.
+    val slotDark = showDark && !linked
+
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         runCatching {
             context.contentResolver.openInputStream(uri)!!.use { input ->
-                PebblesWallpaper.wallpaperFile(context, pickingDark).outputStream().use { input.copyTo(it) }
+                PebblesWallpaper.wallpaperFile(context, slotDark).outputStream().use { input.copyTo(it) }
             }
         }.onSuccess {
             prefs.wallpaperVersion++
         }.onFailure { notify("Couldn't use that image") }
     }
-    fun pick(dark: Boolean) {
-        pickingDark = dark
-        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-    }
+    val pick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
-    PageScaffold("Wallpaper", onBack) {
+    val window = LocalWindowInfo.current.containerSize
+    val lightImage = rememberWallpaperImage(dark = false, prefs.wallpaperVersion, window)
+    val darkImage = rememberWallpaperImage(dark = true, prefs.wallpaperVersion, window)
+    val shown = if (images) Preview.Photo(slotDark, if (slotDark) darkImage else lightImage) else Preview.Pebbles(showDark)
+    val previewDark = when (shown) {
+        is Preview.Pebbles -> shown.dark
+        // An empty slot shows the page's own surface.
+        is Preview.Photo -> if (shown.image != null) shown.image.isMostlyDark() else MaterialTheme.colorScheme.isDark
+    }
+    SystemBarIcons(lightIcons = previewDark)
+
+    Box(Modifier.fillMaxSize()) {
+        WallpaperArt(shown, Modifier.fillMaxSize().then(if (images) Modifier.clickable(onClick = pick) else Modifier))
+
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-        ) {
-            ModeButton("Generated", checked = !prefs.wallpaperImages, ButtonGroupDefaults.connectedLeadingButtonShapes()) {
-                prefs.wallpaperImages = false
-            }
-            ModeButton("My images", checked = prefs.wallpaperImages, ButtonGroupDefaults.connectedTrailingButtonShapes()) {
-                prefs.wallpaperImages = true
-            }
-        }
-        Row(
-            Modifier.fillMaxWidth().height(320.dp).padding(16.dp),
+            Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!prefs.wallpaperImages) {
-                GeneratedPreview(dark = false)
-                GeneratedPreview(dark = true)
-            } else if (prefs.sameImage) {
-                ImageSlot("Light & dark", dark = false, version = prefs.wallpaperVersion) { pick(false) }
-            } else {
-                ImageSlot("Light", dark = false, version = prefs.wallpaperVersion) { pick(false) }
-                ImageSlot("Dark", dark = true, version = prefs.wallpaperVersion) { pick(true) }
+            RoundButton(Ic.back, "Back", size = Sizes.Control, onClick = onBack)
+            PillGroup(Modifier.weight(1f).height(Sizes.Control)) {
+                SourceButton("Pebbles", Ic.shapes, checked = !images) { prefs.wallpaperImages = false }
+                SourceButton("My images", Ic.image, checked = images) { prefs.wallpaperImages = true }
             }
         }
-        if (prefs.wallpaperImages) {
-            Group { SwitchRow(0, 1, "Same image for both", prefs.sameImage, { prefs.sameImage = it }) }
-        }
-        Spacer(Modifier.weight(1f))
+
         val component = ComponentName(context, PebblesWallpaper::class.java)
         val active = WallpaperManager.getInstance(context).wallpaperInfo?.component == component
-        if (!active) {
-            Button(
-                shapes = ButtonDefaults.shapes(),
-                onClick = {
+        // Bottom controls sit in thumb reach, lifted clear of the gesture bar.
+        Row(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(start = 12.dp, end = 12.dp, bottom = Sizes.ThumbLift),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // A split button: the light / dark group leads, the pencil trails, joined by a narrow gap.
+            Row(horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
+                PillGroup(Modifier.height(Sizes.ControlLarge), shape = splitPill(end = !images)) {
+                    PillToggle(Ic.sun, "Light", checked = !showDark || linked) { showDark = false }
+                    if (images) {
+                        PillToggle(
+                            Ic.link, "Same image for both", checked = linked,
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                        ) { prefs.sameImage = !prefs.sameImage }
+                    }
+                    PillToggle(Ic.moon, "Dark", checked = showDark || linked) { showDark = true }
+                }
+                if (images) {
+                    val what = if (linked) "image" else if (slotDark) "dark image" else "light image"
+                    val verb = if (shown is Preview.Photo && shown.image == null) "Choose" else "Change"
+                    RoundButton(Ic.edit, "$verb $what", size = Sizes.ControlLarge, shape = splitPill(start = false), onClick = pick)
+                }
+            }
+            if (!active) {
+                RoundButton(
+                    Ic.check, "Set wallpaper",
+                    size = Sizes.ControlLarge,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ) {
                     context.start(
                         Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
                             .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component),
                     )
-                },
-                modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
-            ) { Text("Set wallpaper") }
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun RowScope.ModeButton(text: String, checked: Boolean, shapes: ToggleButtonShapes, onClick: () -> Unit) {
-    ToggleButton(
-        checked = checked,
-        onCheckedChange = { onClick() },
-        shapes = shapes,
-        colors = ToggleButtonDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
-        modifier = Modifier.weight(1f).height(52.dp).semantics { role = Role.RadioButton },
-    ) {
-        if (checked) {
-            Icon(Ic.check, null, Modifier.size(ToggleButtonDefaults.IconSize))
-            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
-        }
-        Text(text)
-    }
-}
-
-@Composable
-private fun RowScope.GeneratedPreview(dark: Boolean) {
-    val shape = RoundedCornerShape(24.dp)
-    Box(
-        Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .clip(shape)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawIntoCanvas { Pebbles.draw(it.nativeCanvas, size.width, size.height, dark) }
-        }
-        SlotLabel(if (dark) "Dark" else "Light")
-    }
-}
-
-@Composable
-private fun SlotLabel(text: String) {
-    Text(
-        text,
-        color = Color.White,
-        style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier
-            .padding(12.dp)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.55f))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+/** A pill whose sides can meet a neighbour, as in a split button: fully round outside, 4dp where they join. */
+private fun splitPill(start: Boolean = true, end: Boolean = true): Shape {
+    val round = CornerSize(50)
+    val joint = CornerSize(4.dp)
+    return RoundedCornerShape(
+        topStart = if (start) round else joint,
+        topEnd = if (end) round else joint,
+        bottomEnd = if (end) round else joint,
+        bottomStart = if (start) round else joint,
     )
 }
 
+/** An icon button on the system surface, for controls floating over the wallpaper. */
 @Composable
-private fun RowScope.ImageSlot(label: String, dark: Boolean, version: Int, onClick: () -> Unit) {
-    val context = LocalContext.current
-    val image by produceState<ImageBitmap?>(null, version, dark) {
-        value = withContext(Dispatchers.IO) {
-            PebblesWallpaper.decodeSampled(PebblesWallpaper.wallpaperFile(context, dark), 300, 600)?.asImageBitmap()
+private fun RoundButton(
+    icon: ImageVector,
+    label: String,
+    size: Dp,
+    shape: Shape = CircleShape,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceBright,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        shape = shape,
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor, contentColor = contentColor),
+        modifier = Modifier.size(size),
+    ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
+}
+
+/** A connected button group: pill-shaped toggles inside one pill on the system surface. */
+@Composable
+private fun PillGroup(modifier: Modifier = Modifier, shape: Shape = CircleShape, content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceBright)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        content = content,
+    )
+}
+
+/** Sets the status and navigation bar icons to read against the preview, restoring them on leaving. */
+@Composable
+private fun SystemBarIcons(lightIcons: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(lightIcons) {
+        val window = (view.context as Activity).window
+        val bars = WindowCompat.getInsetsController(window, view)
+        val status = bars.isAppearanceLightStatusBars
+        val navigation = bars.isAppearanceLightNavigationBars
+        bars.isAppearanceLightStatusBars = !lightIcons
+        bars.isAppearanceLightNavigationBars = !lightIcons
+        onDispose {
+            bars.isAppearanceLightStatusBars = status
+            bars.isAppearanceLightNavigationBars = navigation
         }
-    }
-    Box(
-        Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        image?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-        if (image == null) {
-            Icon(Ic.add, null, Modifier.align(Alignment.Center).size(32.dp))
-        }
-        SlotLabel(label)
     }
 }
 
+@Composable
+private fun RowScope.SourceButton(text: String, icon: ImageVector, checked: Boolean, onClick: () -> Unit) {
+    ToggleButton(
+        checked = checked,
+        onCheckedChange = { onClick() },
+        shapes = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape),
+        colors = ToggleButtonDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+        modifier = Modifier.weight(1f).fillMaxHeight().semantics { role = Role.RadioButton },
+    ) {
+        Icon(icon, null, Modifier.size(ToggleButtonDefaults.IconSize))
+        Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+        Text(text, maxLines = 1)
+    }
+}
+
+@Composable
+private fun PillToggle(
+    icon: ImageVector,
+    label: String,
+    checked: Boolean,
+    checkedColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    checkedContentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    onClick: () -> Unit,
+) {
+    ToggleButton(
+        checked = checked,
+        onCheckedChange = { onClick() },
+        shapes = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape),
+        colors = ToggleButtonDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            checkedContainerColor = checkedColor,
+            checkedContentColor = checkedContentColor,
+        ),
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier.width(Sizes.Control).fillMaxHeight(),
+    ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
+}
+
+/** What the wallpaper preview shows; a change crossfades. */
+private sealed interface Preview {
+    data class Pebbles(val dark: Boolean) : Preview
+    data class Photo(val dark: Boolean, val image: ImageBitmap?) : Preview
+}
+
+/** Loads the user's light or dark wallpaper image to cover [size], reloading when [version] changes. */
+@Composable
+private fun rememberWallpaperImage(dark: Boolean, version: Int, size: IntSize): ImageBitmap? {
+    val context = LocalContext.current
+    val image by produceState<ImageBitmap?>(null, version, dark, size) {
+        value = withContext(Dispatchers.IO) {
+            val file = PebblesWallpaper.wallpaperFile(context, dark)
+            PebblesWallpaper.decodeSampled(file, size.width.coerceAtLeast(1), size.height.coerceAtLeast(1))?.asImageBitmap()
+        }
+    }
+    return image
+}
+
+/** Whether the top of the image, where the status bar icons sit, is dark. Samples a coarse grid. */
+private fun ImageBitmap.isMostlyDark(): Boolean {
+    val bitmap = asAndroidBitmap()
+    var sum = 0f
+    var n = 0
+    for (x in 0 until 8) for (y in 0 until 3) {
+        val c = bitmap.getPixel(bitmap.width * (2 * x + 1) / 16, bitmap.height * (2 * y + 1) / 60)
+        sum += Color(c).luminance()
+        n++
+    }
+    return sum / n < 0.5f
+}
+
+@Composable
+private fun WallpaperArt(shown: Preview, modifier: Modifier) {
+    Crossfade(shown, modifier, label = "wallpaper") { state ->
+        when (state) {
+            is Preview.Pebbles -> Canvas(Modifier.fillMaxSize()) {
+                drawIntoCanvas { Pebbles.draw(it.nativeCanvas, size.width, size.height, state.dark) }
+            }
+            is Preview.Photo -> if (state.image != null) {
+                Image(state.image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else {
+                Column(
+                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(Ic.add, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (state.dark) "Choose a dark image" else "Choose an image",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
