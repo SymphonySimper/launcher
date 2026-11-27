@@ -125,13 +125,14 @@ fun Home(
             Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
                 LauncherMenu(
                     listOf(
-                        if (stayAwake.on) MenuEntry(Ic.coffee, "Turn off Stay awake") { stayAwake.set(false) }
-                        else MenuEntry(Ic.coffee, "Stay awake") { stayAwake.set(true) },
                         MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
                         MenuEntry(Ic.settings, "System settings", onSystemSettings),
                     ),
                     arrow = false,
                     onDismiss = { menuAt = null },
+                    pill = if (stayAwake.on) MenuEntry(Ic.coffee, "Turn off Stay awake") { stayAwake.set(false) }
+                    else MenuEntry(Ic.coffee, "Stay awake") { stayAwake.set(true) },
+                    pillOn = stayAwake.on,
                 )
             }
         }

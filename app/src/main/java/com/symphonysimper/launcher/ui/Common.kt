@@ -231,6 +231,9 @@ fun SearchField(
 class MenuEntry(val icon: ImageVector, val text: String, val onClick: () -> Unit)
 
 private val MenuMinWidth = 200.dp
+
+/** Space between a menu's pill and its group, wider than the group's own gaps so it reads as separate. */
+private val PillGap = 8.dp
 private val ArrowSize = DpSize(22.dp, 10.dp)
 
 /** Places the menu above its anchor (below when there's no room), lined up like Launcher3's popups. */
@@ -267,9 +270,19 @@ fun splitShape(top: Boolean = true, bottom: Boolean = true, start: Boolean = tru
 
 val SplitGap = 2.dp
 
-/** Lawnchair-style long-press menu, anchored to the composable it's placed in. [arrow] points at the anchor. */
+/**
+ * Lawnchair-style long-press menu, anchored to the composable it's placed in. [arrow] points at the
+ * anchor. A [pill] is a quick action on its own fully rounded button above the group, tonal while
+ * [pillOn].
+ */
 @Composable
-fun LauncherMenu(entries: List<MenuEntry>, arrow: Boolean, onDismiss: () -> Unit) {
+fun LauncherMenu(
+    entries: List<MenuEntry>,
+    arrow: Boolean,
+    onDismiss: () -> Unit,
+    pill: MenuEntry? = null,
+    pillOn: Boolean = false,
+) {
     val density = LocalDensity.current
     val statusBar = WindowInsets.statusBars.getTop(density)
     val position = remember(arrow, statusBar) {
@@ -299,12 +312,24 @@ fun LauncherMenu(entries: List<MenuEntry>, arrow: Boolean, onDismiss: () -> Unit
                 },
             verticalArrangement = Arrangement.spacedBy(SplitGap),
         ) {
+            pill?.let { entry ->
+                val colors = MaterialTheme.colorScheme
+                MenuCard(
+                    CircleShape,
+                    if (pillOn) colors.secondaryContainer else color,
+                    arrowUp = true.takeIf { arrow && position.below },
+                    arrowX = position.arrowX,
+                ) {
+                    MenuRow(entry, onDismiss, if (pillOn) colors.onSecondaryContainer else colors.onSurface, centered = true)
+                }
+                Spacer(Modifier.height(PillGap - SplitGap * 2))
+            }
             entries.forEachIndexed { i, entry ->
                 val shape = splitShape(top = i == 0, bottom = i == entries.lastIndex)
                 // The arrow grows out of the card nearest the anchor.
                 val arrowUp = when {
                     !arrow -> null
-                    position.below -> true.takeIf { i == 0 }
+                    position.below -> true.takeIf { i == 0 && pill == null }
                     else -> false.takeIf { i == entries.lastIndex }
                 }
                 MenuCard(shape, color, arrowUp, position.arrowX) { MenuRow(entry, onDismiss) }
@@ -358,7 +383,12 @@ private class ArrowShape(private val base: Shape, private val arrowX: Float, pri
 }
 
 @Composable
-private fun MenuRow(entry: MenuEntry, onDismiss: () -> Unit) {
+private fun MenuRow(
+    entry: MenuEntry,
+    onDismiss: () -> Unit,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    centered: Boolean = false,
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -366,9 +396,10 @@ private fun MenuRow(entry: MenuEntry, onDismiss: () -> Unit) {
             .clickable { onDismiss(); entry.onClick() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        // A centred button keeps its icon close to its label, as buttons do; rows line their labels up.
+        horizontalArrangement = if (centered) Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally) else Arrangement.spacedBy(16.dp),
     ) {
-        Icon(entry.icon, null, Modifier.size(Sizes.Icon), tint = MaterialTheme.colorScheme.onSurface)
-        Text(entry.text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false)
+        Icon(entry.icon, null, Modifier.size(Sizes.Icon), tint = color)
+        Text(entry.text, style = MaterialTheme.typography.bodyLarge, color = color, maxLines = 1, softWrap = false)
     }
 }

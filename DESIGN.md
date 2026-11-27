@@ -148,7 +148,11 @@ Reuse these before building anything new.
   when not.
 - `LauncherMenu` + `MenuEntry` (`Common.kt`): long-press menu. Each entry is its own `splitShape`
   card with a 2dp gap. With `arrow = true` it points at the item it belongs to. It fades and scales
-  in from the arrow.
+  in from the arrow. A quick action can sit above the group as a `pill`: a fully rounded card of the
+  same width, 8dp above, its icon and label centred 8dp apart. While that action is on, the pill is
+  `secondaryContainer` with `onSecondaryContainer` content.
+  Home's menu (long-press empty space) is the Stay awake pill ("Turn off Stay awake" while it's on)
+  over Launcher settings and System settings.
 - `AppIcon` (`Common.kt`): an app icon. On home and in the drawer (`badge = true`) apps with
   notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
   it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
@@ -157,8 +161,6 @@ Reuse these before building anything new.
   behind `system_neutral2_700` in light, `system_neutral1_800` behind `system_accent1_100` in dark.
   Apps without one keep their normal icon. Settings turn it on for the dock (default) and the drawer
   (off by default); only the icons shown themed are loaded.
-  Home's menu (long-press empty space) is, from the top: Stay awake ("Turn off Stay awake" while
-  it's on), Launcher settings, System settings.
 - `StayAwakeChip` (`StayAwakeChip.kt`): a tonal chip under the date, only while Stay awake is on, so
   home looks unchanged when it's off. `secondaryContainer` with `onSecondaryContainer` content: coffee
   icon (18dp), "Stay awake on" in `labelLarge`, a small close icon (16dp). `Sizes.Chip` (32dp) to look
