@@ -155,7 +155,7 @@ private fun LauncherRoot(resetSignal: Int) {
             },
             onSystemSettings = { context.openSystemSettings() },
             modifier = Modifier.graphicsLayer {
-                val p = drawer.progress.coerceIn(0f, 1f)
+                val p = drawer.progress
                 translationY = -HomeLift.toPx() * p
                 scaleX = 1f - HomeShrink * p
                 scaleY = scaleX
@@ -163,13 +163,13 @@ private fun LauncherRoot(resetSignal: Int) {
         )
         Box(
             Modifier.fillMaxSize().drawBehind {
-                val p = drawer.progress.coerceIn(0f, 1f)
+                val p = drawer.progress
                 if (p > 0f) drawRect(Color.Black, alpha = ScrimAlpha * p)
             },
         )
         Box(
             Modifier.fillMaxSize().graphicsLayer {
-                val p = drawer.progress.coerceIn(0f, 1f)
+                val p = drawer.progress
                 translationY = (1f - p) * size.height
                 // Round top corners that square off as the sheet reaches the top. All four corners are
                 // rounded, which keeps the fast round-rect clip: the bottom two are below the screen

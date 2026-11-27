@@ -27,8 +27,9 @@ class DrawerState(
     private val spec: AnimationSpec<Float>,
     private val flingVelocity: Float,
 ) {
-    var progress by mutableFloatStateOf(0f)
-        private set
+    private var springValue by mutableFloatStateOf(0f)
+
+    val progress: Float get() = springValue.coerceIn(0f, 1f)
 
     var open by mutableStateOf(false)
         private set
@@ -39,9 +40,9 @@ class DrawerState(
 
     fun drag(dy: Float): Float {
         settling?.cancel()
-        val before = progress.coerceIn(0f, 1f)
-        progress = (before - dy / range).coerceIn(0f, 1f)
-        return (before - progress) * range
+        val before = progress
+        springValue = (before - dy / range).coerceIn(0f, 1f)
+        return (before - springValue) * range
     }
 
     fun release(velocity: Float) = animateTo(
@@ -57,14 +58,14 @@ class DrawerState(
         this.open = open
         settling?.cancel()
         settling = scope.launch {
-            animate(progress, if (open) 1f else 0f, -velocity / range, spec) { value, _ -> progress = value }
+            animate(springValue, if (open) 1f else 0f, -velocity / range, spec) { value, _ -> springValue = value }
         }
     }
 
     fun snapTo(open: Boolean) {
         settling?.cancel()
         this.open = open
-        progress = if (open) 1f else 0f
+        springValue = if (open) 1f else 0f
     }
 
     val pullToClose = object : NestedScrollConnection {
