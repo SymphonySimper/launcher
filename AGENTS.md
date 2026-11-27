@@ -1,5 +1,10 @@
 # AGENTS.md
 
+## Design
+
+Before changing anything visible, read [DESIGN.md](DESIGN.md): colours, sizes, shapes, components and
+motion the launcher already uses. Follow it, and add to it when you settle a new pattern.
+
 ## Commit messages
 
 Use the format `<scope>: <message>`.
