@@ -89,6 +89,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -498,7 +499,12 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
 }
 
 @Composable
-private fun AppListPage(title: String, onBack: () -> Unit, list: LazyListScope.(query: String) -> Unit) {
+private fun AppListPage(
+    title: String,
+    onBack: () -> Unit,
+    state: LazyListState = rememberLazyListState(),
+    list: LazyListScope.(query: String) -> Unit,
+) {
     var query by remember { mutableStateOf("") }
     PageScaffold(
         title, onBack,
@@ -507,6 +513,7 @@ private fun AppListPage(title: String, onBack: () -> Unit, list: LazyListScope.(
         },
     ) {
         LazyColumn(
+            state = state,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
         ) { list(query) }
@@ -531,31 +538,62 @@ private fun AddAppPage(onBack: () -> Unit) {
     }
 }
 
+/**
+ * Hidden apps on top, then the rest. Switching one glides it to its new section while the rows on
+ * screen stay where they are, so it's clear where it went.
+ */
 @Composable
 private fun HiddenPage(onBack: () -> Unit) {
     val prefs = LauncherApp.instance.prefs
     val all = LauncherApp.instance.apps.all
-    AppListPage("Hidden apps", onBack) { query ->
+    val state = rememberLazyListState()
+    AppListPage("Hidden apps", onBack, state) { query ->
         val apps = all.matching(query)
+        fun rows(hiddenKeys: Set<String>): List<String> {
+            val (hidden, shown) = apps.partition { it.key in hiddenKeys }
+            val header = if (hidden.isNotEmpty() && shown.isNotEmpty()) listOf(VisibleHeader) else emptyList()
+            return hidden.map { it.key } + header + shown.map { it.key }
+        }
+
+        fun toggle(app: App) {
+            // A lazy list keeps its first visible row in place. When that row is the one moving, the list
+            // would follow it to the other section, so pin the view to a row that stays put instead.
+            val info = state.layoutInfo
+            val atTop = state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0
+            val anchor = info.visibleItemsInfo.firstOrNull { it.key != app.key }
+            prefs.hidden = if (app.key in prefs.hidden) prefs.hidden - app.key else prefs.hidden + app.key
+            when {
+                atTop -> state.requestScrollToItem(0)
+                anchor != null -> state.requestScrollToItem(
+                    rows(prefs.hidden).indexOf(anchor.key).coerceAtLeast(0),
+                    -anchor.offset, // offsets count from the start of the content, after its padding
+                )
+            }
+        }
+
         val hidden = apps.filter { it.key in prefs.hidden }
         val shown = apps.filter { it.key !in prefs.hidden }
         fun section(items: List<App>) = itemsIndexed(items, key = { _, app -> app.key }) { i, app ->
-            val isHidden = app.key in prefs.hidden
             SegmentedListItem(
-                onClick = { prefs.hidden = if (isHidden) prefs.hidden - app.key else prefs.hidden + app.key },
+                onClick = { toggle(app) },
                 shapes = ListItemDefaults.segmentedShapes(i, items.size),
                 colors = itemColors,
+                modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow)),
                 leadingContent = { AppIcon(app, 40.dp) },
-                trailingContent = { MonoSwitch(isHidden) },
+                trailingContent = { MonoSwitch(app.key in prefs.hidden) },
             ) { Title(app.label) }
         }
         section(hidden)
         if (hidden.isNotEmpty() && shown.isNotEmpty()) {
-            item(key = "visible-header") { SectionHeader("Visible", Modifier.padding(start = 16.dp, top = 14.dp, bottom = 6.dp)) }
+            item(key = VisibleHeader) {
+                SectionHeader("Visible", Modifier.animateItem().padding(start = 16.dp, top = 14.dp, bottom = 6.dp))
+            }
         }
         section(shown)
     }
 }
+
+private const val VisibleHeader = "visible-header"
 
 @Composable
 private fun AppRow(app: App, shapes: ListItemShapes, onClick: () -> Unit) {
