@@ -130,7 +130,10 @@ private fun LauncherRoot(resetSignal: Int) {
         Home(
             dock = dock,
             drawer = drawer,
-            onLauncherSettings = { context.start(Intent(context, SettingsActivity::class.java)) },
+            // A fresh task each time, so settings opens on its main page rather than where it was left.
+            onLauncherSettings = {
+                context.start(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
+            },
             onSystemSettings = { context.openSystemSettings() },
             modifier = Modifier.graphicsLayer {
                 alpha = 1f - drawer.progress.coerceIn(0f, 1f)
