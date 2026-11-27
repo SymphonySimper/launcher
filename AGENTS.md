@@ -29,7 +29,9 @@ launcher fast, lean and idle when nothing is happening:
   launcher (baseline profile, benchmarks, connected tests), and restore them afterwards:
   `adb shell dumpsys activity com.symphonysimper.launcher/.MainActivity export-settings` prints the
   backup JSON (keep the part from `{` to `}`), and `... import-settings $(base64 -w0 backup.json)`
-  restores it. The launcher must be on screen for both.
+  restores it. The launcher must be on screen for both. An uninstall also drops notification access
+  for badges; give it back with
+  `adb shell cmd notification allow_listener com.symphonysimper.launcher/com.symphonysimper.launcher.BadgeService`.
 - Don't use `setFixedSize` on the wallpaper surface: wallpapers must size from layout, and the crash
   resets the user's wallpaper and default home app.
 

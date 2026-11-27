@@ -144,6 +144,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        followPortraitOnly()
         setContent { LauncherTheme { SettingsRoot(resumes) } }
     }
 
@@ -183,7 +184,7 @@ private fun SettingsRoot(resumes: Int) {
                     Page.AddApp -> AddAppPage(back)
                     Page.Hidden -> HiddenPage(back)
                     Page.Engine -> EnginePage(back)
-                    Page.Wallpaper -> WallpaperPage(back)
+                    Page.Wallpaper -> WallpaperPage(resumes, back)
                 }
             }
             SnackbarHost(
@@ -343,9 +344,9 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                 Spacer(Modifier.height(12.dp))
             }
             Group {
-                NavRow(0, 4, Ic.dock, "Dock") { open(Page.Dock) }
-                NavRow(1, 4, Ic.hide, "Hidden apps") { open(Page.Hidden) }
-                SwitchRow(2, 4, "Notification badges", prefs.badges && badgeAccess, { on ->
+                NavRow(0, 5, Ic.dock, "Dock") { open(Page.Dock) }
+                NavRow(1, 5, Ic.hide, "Hidden apps") { open(Page.Hidden) }
+                SwitchRow(2, 5, "Notification badges", prefs.badges && badgeAccess, { on ->
                     prefs.badges = on
                     if (on && !badgeAccess) {
                         context.start(
@@ -356,9 +357,10 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                         )
                     }
                 }, leading = { Lead(Ic.bell) })
-                NavRow(3, 4, Ic.image, "Wallpaper") {
+                NavRow(3, 5, Ic.image, "Wallpaper") {
                     open(Page.Wallpaper)
                 }
+                SwitchRow(4, 5, "Portrait only", prefs.portraitOnly, { prefs.portraitOnly = it }, leading = { Lead(Ic.portrait) })
             }
             Group("Search") {
                 NavRow(0, 3, Ic.globe, "Search engine") { open(Page.Engine) }
@@ -643,10 +645,15 @@ private fun EnginePage(onBack: () -> Unit) {
  * system theme: the source at the top, light / dark and image actions in a toolbar at the bottom.
  */
 @Composable
-private fun WallpaperPage(onBack: () -> Unit) {
+private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
     val notify = LocalNotify.current
+    val wallpapers = remember { context.getSystemService(WallpaperManager::class.java) }
+    // Whether the lock screen has a wallpaper of its own rather than showing home's. Re-checked after
+    // returning from anywhere that could have changed it.
+    var lockChanged by remember { mutableIntStateOf(0) }
+    val lockDiffers = remember(resumes, lockChanged) { wallpapers.getWallpaperId(WallpaperManager.FLAG_LOCK) >= 0 }
     var showDark by rememberSaveable { mutableStateOf(PebblesWallpaper.isDark(context)) }
     val images = prefs.wallpaperImages
     val linked = images && prefs.sameImage
@@ -716,6 +723,20 @@ private fun WallpaperPage(onBack: () -> Unit) {
                     val what = if (linked) "image" else if (slotDark) "dark image" else "light image"
                     val verb = if (shown is Preview.Photo && shown.image == null) "Choose" else "Change"
                     RoundButton(Ic.edit, "$verb $what", size = Sizes.ControlLarge, shape = splitPill(start = false), onClick = pick)
+                }
+            }
+            if (PebblesWallpaper.isActive && lockDiffers) {
+                // Removing the lock screen's own wallpaper makes it show home's again.
+                RoundButton(
+                    Ic.lock, "Use on lock screen too",
+                    size = Sizes.ControlLarge,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ) {
+                    runCatching { wallpapers.clear(WallpaperManager.FLAG_LOCK) }
+                        .onSuccess { notify("Lock screen now matches home") }
+                        .onFailure { notify("Couldn't change the lock screen") }
+                    lockChanged++
                 }
             }
             if (!PebblesWallpaper.isActive) {

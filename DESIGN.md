@@ -167,7 +167,10 @@ Reuse these before building anything new.
 - `MonoSwitch`: a Material switch with a check icon in the thumb when on. Rows use plain `onClick`,
   because the "checked" list item tints the whole row.
 - `AppListPage`: searchable app list with the search field at the bottom.
-- Wallpaper page controls: `RoundButton`, `PillGroup`, `PillToggle`, `SourceButton`.
+- Wallpaper page controls: `RoundButton`, `PillGroup`, `PillToggle`, `SourceButton`. The single
+  `primary` round button at the end of the bottom row is whatever needs doing: "Set wallpaper" (check)
+  while Pebbles isn't the wallpaper, or "Use on lock screen too" (lock) while the lock screen has its
+  own wallpaper. It hides once there's nothing to do.
 - A new settings page is a `Page` enum entry with its parent (back goes to the parent) and a case in
   `SettingsRoot`.
 
@@ -209,6 +212,11 @@ only for failures in `Actions.kt`, which runs outside Compose.
   screen stay put, so it's clear where the row went.
 - Reordering a list: other rows glide to their places with `animateItem`. The dragged row follows
   the finger exactly, grows 3% and gains a shadow.
+
+## Orientation
+
+The launcher and its settings stay upright by default ("Portrait only", on unless turned off), on
+every device. Turned off, they follow auto-rotate like any app. Layouts must still work sideways.
 
 ## Writing
 

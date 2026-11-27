@@ -33,6 +33,8 @@ class Prefs(context: Context) {
     var stayAwake by bool("stay_awake", false)
     var savedTimeout by int("saved_timeout", 60_000)
     var notificationsAsked by bool("notifications_asked", false)
+    /** Keeps the launcher upright even with auto-rotate on. */
+    var portraitOnly by bool("portrait_only", true)
 
     fun toJson(): String {
         val json = JSONObject()
@@ -40,6 +42,7 @@ class Prefs(context: Context) {
             .put("dock", JSONArray(dock))
             .put("hiddenApps", JSONArray(hidden.sorted()))
             .put("notificationBadges", badges)
+            .put("portraitOnly", portraitOnly)
             .put(
                 "search",
                 JSONObject()
@@ -65,6 +68,7 @@ class Prefs(context: Context) {
         json.optJSONArray("dock")?.let { dock = it.strings().take(MAX_DOCK) }
         json.optJSONArray("hiddenApps")?.let { hidden = it.strings().toSet() }
         if (json.has("notificationBadges")) badges = json.getBoolean("notificationBadges")
+        if (json.has("portraitOnly")) portraitOnly = json.getBoolean("portraitOnly")
         json.optJSONObject("search")?.let { s ->
             engine = s.optString("engine", engine)
             customUrl = s.optString("customUrl", customUrl)

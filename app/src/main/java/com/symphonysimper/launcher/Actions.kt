@@ -2,6 +2,11 @@ package com.symphonysimper.launcher
 
 import android.Manifest
 import android.app.ActivityOptions
+import android.content.pm.ActivityInfo
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
@@ -146,4 +151,13 @@ fun Context.requestAddTile() {
     ) { }
 }
 
-
+/** Keeps this activity upright while Portrait only is on, following the setting as it changes. */
+fun ComponentActivity.followPortraitOnly() {
+    val prefs = LauncherApp.instance.prefs
+    // Main.immediate: the first value applies right here in onCreate, before anything is drawn sideways.
+    lifecycleScope.launch {
+        snapshotFlow { prefs.portraitOnly }.collect { portrait ->
+            requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+}

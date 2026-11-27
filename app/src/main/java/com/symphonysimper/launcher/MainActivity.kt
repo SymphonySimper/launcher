@@ -60,6 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         edgeToEdge()
+        followPortraitOnly()
         setContent { LauncherTheme { LauncherRoot(resetSignal) } }
     }
 
