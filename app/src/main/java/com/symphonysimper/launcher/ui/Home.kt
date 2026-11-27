@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.symphonysimper.launcher.App
+import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.expandNotifications
 import com.symphonysimper.launcher.ui.theme.Sizes
 import java.text.SimpleDateFormat
@@ -113,6 +114,7 @@ fun Home(
                         app, Sizes.AppIcon, source.modifier,
                         iconModifier = Modifier.clip(SquircleShape).combinedClickable(onClick = { source.launch(app) }),
                         badge = true,
+                        themed = LauncherApp.instance.prefs.themedDock,
                     )
                 }
             }

@@ -1,6 +1,9 @@
 package com.symphonysimper.launcher.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.colorResource
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.WindowInsets
@@ -115,28 +118,46 @@ fun rememberLaunchSource(): LaunchSource {
  * icon never clips the dot.
  */
 @Composable
-fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier, iconModifier: Modifier = Modifier, badge: Boolean = false) {
+fun AppIcon(
+    app: App,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    badge: Boolean = false,
+    themed: Boolean = false,
+) {
     val prefs = LauncherApp.instance.prefs
     val dot = badge && prefs.badges && (Badges.counts[app.pkg] ?: 0) > 0
     val color = MaterialTheme.colorScheme.primary
+    val mono = if (themed) LauncherApp.instance.apps.monochrome(app.key) else null
     Box(
         modifier.drawWithContent {
             drawContent()
             if (dot) drawCircle(color, DotRadius * this.size.width, dotCenter())
         },
     ) {
-        Image(
-            app.icon,
-            contentDescription = null,
-            modifier = iconModifier
-                .size(size)
-                // Its own layer, so the notch clears the icon only and shows what's behind.
-                .graphicsLayer { compositingStrategy = if (dot) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
-                .drawWithContent {
-                    drawContent()
-                    if (dot) drawCircle(Color.Black, (DotRadius + DotGap) * this.size.width, dotCenter(), blendMode = BlendMode.Clear)
-                },
-        )
+        val notched = iconModifier
+            .size(size)
+            // Its own layer, so the notch clears the icon only and shows what's behind.
+            .graphicsLayer { compositingStrategy = if (dot) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
+            .drawWithContent {
+                drawContent()
+                if (dot) drawCircle(Color.Black, (DotRadius + DotGap) * this.size.width, dotCenter(), blendMode = BlendMode.Clear)
+            }
+        if (mono != null) {
+            // Pixel's themed icon colours, from the wallpaper.
+            val dark = isSystemInDarkTheme()
+            val background = colorResource(if (dark) android.R.color.system_neutral1_800 else android.R.color.system_accent1_100)
+            val foreground = colorResource(if (dark) android.R.color.system_accent1_100 else android.R.color.system_neutral2_700)
+            Image(
+                mono,
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(foreground),
+                modifier = notched.background(background, SquircleShape),
+            )
+        } else {
+            Image(app.icon, contentDescription = null, modifier = notched)
+        }
     }
 }
 

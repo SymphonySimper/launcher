@@ -153,6 +153,10 @@ Reuse these before building anything new.
   notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
   it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
   Put clips and clicks in `iconModifier` so they never clip the dot. No counts, no red.
+  With `themed = true` it shows the app's monochrome layer the way Pixel does: `system_accent1_100`
+  behind `system_neutral2_700` in light, `system_neutral1_800` behind `system_accent1_100` in dark.
+  Apps without one keep their normal icon. Settings turn it on for the dock (default) and the drawer
+  (off by default); only the icons shown themed are loaded.
   Home's menu (long-press empty space) is, from the top: Stay awake ("Turn off Stay awake" while
   it's on), Launcher settings, System settings.
 - `StayAwakeChip` (`StayAwakeChip.kt`): a tonal chip under the date, only while Stay awake is on, so

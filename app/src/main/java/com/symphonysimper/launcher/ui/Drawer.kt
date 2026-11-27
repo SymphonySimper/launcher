@@ -262,7 +262,7 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppIcon(app, Sizes.AppIcon, source.modifier, badge = true)
+            AppIcon(app, Sizes.AppIcon, source.modifier, badge = true, themed = LauncherApp.instance.prefs.themedDrawer)
             Spacer(Modifier.height(10.dp))
             Text(
                 app.label,

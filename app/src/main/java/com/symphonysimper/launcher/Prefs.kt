@@ -33,6 +33,9 @@ class Prefs(context: Context) {
     var savedTimeout by int("saved_timeout", 60_000)
     /** Keeps the launcher upright even with auto-rotate on. */
     var portraitOnly by bool("portrait_only", true)
+    /** Pixel-style themed icons, where the app provides one: on in the dock, off in the drawer. */
+    var themedDock by bool("themed_dock", true)
+    var themedDrawer by bool("themed_drawer", false)
 
     fun toJson(): String {
         val json = JSONObject()
@@ -41,6 +44,7 @@ class Prefs(context: Context) {
             .put("hiddenApps", JSONArray(hidden.sorted()))
             .put("notificationBadges", badges)
             .put("portraitOnly", portraitOnly)
+            .put("themedIcons", JSONObject().put("dock", themedDock).put("drawer", themedDrawer))
             .put(
                 "search",
                 JSONObject()
@@ -67,6 +71,10 @@ class Prefs(context: Context) {
         json.optJSONArray("hiddenApps")?.let { hidden = it.strings().toSet() }
         if (json.has("notificationBadges")) badges = json.getBoolean("notificationBadges")
         if (json.has("portraitOnly")) portraitOnly = json.getBoolean("portraitOnly")
+        json.optJSONObject("themedIcons")?.let { t ->
+            themedDock = t.optBoolean("dock", themedDock)
+            themedDrawer = t.optBoolean("drawer", themedDrawer)
+        }
         json.optJSONObject("search")?.let { s ->
             engine = s.optString("engine", engine)
             customUrl = s.optString("customUrl", customUrl)

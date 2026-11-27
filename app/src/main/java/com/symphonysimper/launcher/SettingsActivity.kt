@@ -362,6 +362,10 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                 }
                 SwitchRow(4, 5, "Portrait only", prefs.portraitOnly, { prefs.portraitOnly = it }, leading = { Lead(Ic.portrait) })
             }
+            Group("Themed icons") {
+                SwitchRow(0, 2, "Dock", prefs.themedDock, { prefs.themedDock = it }, leading = { Lead(Ic.dock) })
+                SwitchRow(1, 2, "App drawer", prefs.themedDrawer, { prefs.themedDrawer = it }, leading = { Lead(Ic.apps) })
+            }
             Group("Search") {
                 NavRow(0, 3, Ic.globe, "Search engine") { open(Page.Engine) }
                 SwitchRow(1, 3, "Play Store button", prefs.playStore, { prefs.playStore = it }, leading = { Lead(Ic.play) })
