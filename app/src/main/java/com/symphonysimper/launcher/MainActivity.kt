@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -131,7 +132,10 @@ private fun LauncherRoot(resetSignal: Int) {
             drawer = drawer,
             onLauncherSettings = { context.start(Intent(context, SettingsActivity::class.java)) },
             onSystemSettings = { context.openSystemSettings() },
-            modifier = Modifier.graphicsLayer { alpha = 1f - drawer.progress.coerceIn(0f, 1f) },
+            modifier = Modifier.graphicsLayer {
+                alpha = 1f - drawer.progress.coerceIn(0f, 1f)
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            },
         )
         // The drawer stays composed so opening it is just a redraw; progress is read only while
         // drawing, so following the finger never recomposes. The search bar below stays put on top.
@@ -139,6 +143,8 @@ private fun LauncherRoot(resetSignal: Int) {
             Modifier.fillMaxSize().graphicsLayer {
                 val p = drawer.progress
                 alpha = p.coerceIn(0f, 1f)
+                // Fade each draw rather than an offscreen copy of the whole drawer: far less GPU work.
+                compositingStrategy = CompositingStrategy.ModulateAlpha
                 // Closed, it also moves off screen, so it can't catch touches meant for home.
                 translationY = if (p <= 0f) size.height else (1f - p) * drawer.range
             },
