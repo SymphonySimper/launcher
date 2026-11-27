@@ -379,39 +379,50 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     }
 }
 
+private class DockReorder(initial: List<String>, private val list: LazyListState, private val save: (List<String>) -> Unit) {
+    val order = initial.toMutableStateList()
+    var dragging by mutableStateOf<String?>(null)
+        private set
+    var offset by mutableFloatStateOf(0f)
+        private set
+
+    fun start(key: String) {
+        dragging = key
+        offset = 0f
+    }
+
+    fun move(dy: Float) {
+        val key = dragging ?: return
+        offset += dy
+        val items = list.layoutInfo.visibleItemsInfo
+        val current = items.firstOrNull { it.key == key } ?: return
+        val center = current.offset + offset + current.size / 2
+        val target = items.firstOrNull { it.key != key && it.key in order && center.toInt() in it.offset until it.offset + it.size }
+            ?: return
+        order.add(order.indexOf(target.key), order.removeAt(order.indexOf(key)))
+        offset += current.offset - target.offset
+    }
+
+    fun end() {
+        if (dragging == null) return
+        dragging = null
+        offset = 0f
+        save(order.toList())
+    }
+
+    fun remove(key: String) {
+        order.remove(key)
+        save(order.toList())
+    }
+}
+
 @Composable
 private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
     val prefs = LauncherApp.instance.prefs
     val repo = LauncherApp.instance.apps
-    val order = remember { prefs.dock.filter { repo.find(it) != null }.toMutableStateList() }
     val list = rememberLazyListState()
-    var dragging by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
-
-    val drag = remember {
-        object {
-            fun start(key: String) { dragging = key; dragOffset = 0f }
-
-            fun move(dy: Float) {
-                val key = dragging ?: return
-                dragOffset += dy
-                val items = list.layoutInfo.visibleItemsInfo
-                val current = items.firstOrNull { it.key == key } ?: return
-                val center = current.offset + dragOffset + current.size / 2
-                val target = items.firstOrNull { it.key != key && it.key in order && center.toInt() in it.offset until it.offset + it.size }
-                    ?: return
-                order.add(order.indexOf(target.key), order.removeAt(order.indexOf(key)))
-                dragOffset += current.offset - target.offset
-            }
-
-            fun end() {
-                if (dragging == null) return
-                dragging = null
-                dragOffset = 0f
-                prefs.dock = order.toList()
-            }
-        }
-    }
+    val drag = remember { DockReorder(prefs.dock.filter { repo.find(it) != null }, list) { prefs.dock = it } }
+    val order = drag.order
 
     PageScaffold("Dock", onBack) {
         LazyColumn(
@@ -421,7 +432,7 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
         ) {
             itemsIndexed(order, key = { _, key -> key }) { i, key ->
                 val app = repo.find(key) ?: return@itemsIndexed
-                val isDragged = dragging == key
+                val isDragged = drag.dragging == key
                 val lift by animateFloatAsState(if (isDragged) 1f else 0f, label = "lift")
                 SegmentedListItem(
                     onClick = {},
@@ -431,7 +442,7 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                         .animateItem(placementSpec = if (isDragged) null else spring(stiffness = Spring.StiffnessMediumLow))
                         .zIndex(if (isDragged) 1f else 0f)
                         .graphicsLayer {
-                            translationY = if (isDragged) dragOffset else 0f
+                            translationY = if (isDragged) drag.offset else 0f
                             scaleX = 1f + 0.03f * lift
                             scaleY = scaleX
                             shadowElevation = 6.dp.toPx() * lift
@@ -448,7 +459,7 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                     leadingContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = { order.remove(key); prefs.dock = order.toList() },
+                                onClick = { drag.remove(key) },
                                 shapes = IconButtonDefaults.shapes(),
                                 modifier = Modifier.size(Sizes.MinTouch),
                             ) {
