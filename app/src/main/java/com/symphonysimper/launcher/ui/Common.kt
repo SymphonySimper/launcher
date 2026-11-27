@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -18,7 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -170,7 +177,7 @@ fun SearchField(
 class MenuEntry(val icon: ImageVector, val text: String, val onClick: () -> Unit)
 
 private val MenuMinWidth = 200.dp
-private val ArrowSize = DpSize(18.dp, 9.dp)
+private val ArrowSize = DpSize(22.dp, 10.dp)
 
 /** Places the menu above its anchor (below when there's no room), lined up like Launcher3's popups. */
 private class MenuPosition(val inset: Int, val gap: Int, val margin: Int, val top: Int) : PopupPositionProvider {
@@ -214,7 +221,7 @@ fun LauncherMenu(entries: List<MenuEntry>, arrow: Boolean, onDismiss: () -> Unit
     val position = remember(arrow, statusBar) {
         with(density) {
             MenuPosition(
-                inset = 26.dp.roundToPx(),
+                inset = 40.dp.roundToPx(), // keeps the arrow clear of the card's rounded corner
                 gap = (if (arrow) 2.dp else 32.dp).roundToPx(),
                 margin = 8.dp.roundToPx(),
                 top = statusBar + 8.dp.roundToPx(),
@@ -238,18 +245,62 @@ fun LauncherMenu(entries: List<MenuEntry>, arrow: Boolean, onDismiss: () -> Unit
                 },
             verticalArrangement = Arrangement.spacedBy(SplitGap),
         ) {
-            if (arrow && position.below) MenuArrow(position.arrowX, up = true, color)
             entries.forEachIndexed { i, entry ->
-                MenuCard(splitShape(top = i == 0, bottom = i == entries.lastIndex), color) { MenuRow(entry, onDismiss) }
+                val shape = splitShape(top = i == 0, bottom = i == entries.lastIndex)
+                // The arrow grows out of the card nearest the anchor.
+                val arrowUp = when {
+                    !arrow -> null
+                    position.below -> true.takeIf { i == 0 }
+                    else -> false.takeIf { i == entries.lastIndex }
+                }
+                MenuCard(shape, color, arrowUp, position.arrowX) { MenuRow(entry, onDismiss) }
             }
-            if (arrow && !position.below) MenuArrow(position.arrowX, up = false, color)
         }
     }
 }
 
+/** A menu group; with [arrowUp] set, an arrow at [arrowX] sticks out of its top (true) or bottom (false). */
 @Composable
-private fun MenuCard(shape: Shape, color: Color, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().shadow(3.dp, shape).background(color, shape).clip(shape), content = content)
+private fun MenuCard(shape: Shape, color: Color, arrowUp: Boolean?, arrowX: Int, content: @Composable ColumnScope.() -> Unit) {
+    val outline = if (arrowUp == null) shape else remember(shape, arrowUp, arrowX) { ArrowShape(shape, arrowX.toFloat(), arrowUp) }
+    val room = if (arrowUp == true) PaddingValues(top = ArrowSize.height) else if (arrowUp == false) PaddingValues(bottom = ArrowSize.height) else PaddingValues()
+    Column(Modifier.fillMaxWidth().shadow(3.dp, outline).background(color, outline).clip(outline).padding(room), content = content)
+}
+
+/**
+ * [base] with a triangle joined onto its top ([up]) or bottom edge, centred at [arrowX]. One outline,
+ * so the arrow shares the card's shadow and there's no seam between them.
+ */
+private class ArrowShape(private val base: Shape, private val arrowX: Float, private val up: Boolean) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val w = with(density) { ArrowSize.width.toPx() } / 2
+        val h = with(density) { ArrowSize.height.toPx() }
+        val fillet = with(density) { 4.dp.toPx() } // curve where the arrow meets the card
+        val body = Path().apply {
+            addOutline(base.createOutline(Size(size.width, size.height - h), layoutDirection, density))
+            if (up) translate(Offset(0f, h))
+        }
+        val out = if (up) -1f else 1f // direction the tip points
+        val edge = if (up) h else size.height - h
+        val tip = Offset(arrowX, edge + out * h)
+        val left = Offset(arrowX - w, edge)
+        val right = Offset(arrowX + w, edge)
+        fun Offset.towards(to: Offset, t: Float) = this + (to - this) * t
+        val arrow = Path().apply {
+            moveTo(left.x - fillet, edge)
+            // Soft shoulders and a rounded tip: each corner becomes a curve through it.
+            left.towards(tip, 0.35f).let { quadraticTo(left.x, left.y, it.x, it.y) }
+            tip.towards(left, 0.35f).let { lineTo(it.x, it.y) }
+            tip.towards(right, 0.35f).let { quadraticTo(tip.x, tip.y, it.x, it.y) }
+            right.towards(tip, 0.35f).let { lineTo(it.x, it.y) }
+            quadraticTo(right.x, right.y, right.x + fillet, edge)
+            // Back through the card's edge so the two pieces overlap with no seam.
+            lineTo(right.x + fillet, edge - out * fillet)
+            lineTo(left.x - fillet, edge - out * fillet)
+            close()
+        }
+        return Outline.Generic(Path.combine(PathOperation.Union, body, arrow))
+    }
 }
 
 @Composable
@@ -266,24 +317,4 @@ private fun MenuRow(entry: MenuEntry, onDismiss: () -> Unit) {
         Icon(entry.icon, null, Modifier.size(Sizes.Icon), tint = MaterialTheme.colorScheme.onSurface)
         Text(entry.text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false)
     }
-}
-
-@Composable
-private fun MenuArrow(centerX: Int, up: Boolean, color: Color) {
-    val shape = remember(up) {
-        GenericShape { size, _ ->
-            if (up) {
-                moveTo(size.width / 2, 0f); lineTo(size.width, size.height); lineTo(0f, size.height)
-            } else {
-                moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height)
-            }
-            close()
-        }
-    }
-    Box(
-        Modifier
-            .offset { IntOffset(centerX - ArrowSize.width.roundToPx() / 2, SplitGap.roundToPx() * if (up) 1 else -1) }
-            .size(ArrowSize)
-            .background(color, shape),
-    )
 }
