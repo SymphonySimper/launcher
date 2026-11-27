@@ -1,0 +1,71 @@
+# Publishes a GitHub release with a signed APK whenever the release branch moves.
+#
+# To release, fast-forward the release branch to a commit on main:
+#   git push origin main:release
+#
+# Signing needs four repository secrets: SIGNING_KEYSTORE_BASE64 (the .jks file, base64-encoded),
+# SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD. Every release must be signed with
+# the same key, or phones can't update from one release to the next.
+name: Release
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+    steps:
+      - name: Check for the signing key
+        if: env.HAS_KEY != 'true'
+        run: echo "::warning::Signing secrets aren't set, so no release was made. See the top of release.yml."
+
+      - uses: actions/checkout@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          fetch-depth: 0 # the version number is the commit count
+
+      - uses: actions/setup-java@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          cache-read-only: true
+
+      - name: Build signed APK
+        if: env.HAS_KEY == 'true'
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          export SIGNING_KEYSTORE="$RUNNER_TEMP/release.jks"
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$SIGNING_KEYSTORE"
+          ./gradlew --no-daemon :app:assembleRelease
+          rm "$SIGNING_KEYSTORE"
+
+      - name: Publish release
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out=app/build/outputs/apk/release
+          version=$(jq -r '.elements[0].versionName' "$out/output-metadata.json")
+          apk="launcher-$version.apk"
+          cp "$out/$(jq -r '.elements[0].outputFile' "$out/output-metadata.json")" "$apk"
+          gh release create "v$version" "$apk" --target "$GITHUB_SHA" --title "Launcher $version" --generate-notes

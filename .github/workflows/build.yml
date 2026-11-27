@@ -1,0 +1,39 @@
+# Builds the app on every push to main and every pull request, so a broken build shows up before release.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the version number is the commit count
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Build
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: launcher-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 7

@@ -1,0 +1,30 @@
+# Weekly dependency updates, one PR per group, with commit messages in the repo's `deps: ...` style.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    groups:
+      # AGP and Kotlin usually need to move together with Gradle itself.
+      build:
+        patterns:
+          - com.android.*
+          - org.jetbrains.kotlin*
+          - org.gradle.*
+      androidx:
+        patterns:
+          - androidx.*
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    groups:
+      actions:
+        patterns:
+          - "*"

@@ -4,6 +4,19 @@ A small, fast Android home screen built with Jetpack Compose and Material 3 Expr
 search-first app and contact lookup, a dock, the Pebbles live wallpaper and a Stay awake
 Quick Settings tile.
 
+## Releasing
+
+Every push to `main` is built by the Build workflow. To publish a release, fast-forward the `release`
+branch to main:
+
+```sh
+git push origin main:release
+```
+
+The Release workflow then builds a signed APK and publishes it as a GitHub release. The version is
+`1.0.<commit count>`, so every release installs over the one before it. Signing uses the secrets
+listed at the top of [release.yml](.github/workflows/release.yml).
+
 ## Thanks
 
 This launcher borrows ideas from these open-source apps:
