@@ -50,9 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.LauncherApp
-import com.symphonysimper.launcher.developerOptionsOn
 import com.symphonysimper.launcher.expandNotifications
-import com.symphonysimper.launcher.openDeveloperOptions
 import com.symphonysimper.launcher.ui.theme.Sizes
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -124,15 +122,11 @@ fun Home(
         }
 
         menuAt?.let { at ->
-            // Read once each time the menu opens, so nothing watches the setting in between.
-            val developer = remember(at) { context.developerOptionsOn() }
             Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
                 LauncherMenu(
-                    listOfNotNull(
+                    listOf(
                         MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
                         MenuEntry(Ic.settings, "System settings", onSystemSettings),
-                        // Only while Developer options is turned on in system settings.
-                        if (developer) MenuEntry(Ic.code, "Developer options") { context.openDeveloperOptions() } else null,
                     ),
                     arrow = false,
                     onDismiss = { menuAt = null },

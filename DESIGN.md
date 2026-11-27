@@ -153,8 +153,8 @@ Reuse these before building anything new.
   it, over it when it opens below), its icon and label lined up with the rows. It's a toggle:
   `surfaceBright` with an outlined icon while off, filled `primary` with `onPrimary` content and a
   filled icon while on, with the same label in both states, read out as a switch.
-  Home's menu (long-press empty space) is Launcher settings, System settings and, only while
-  Developer options is turned on, Developer options, with the Stay awake pill nearest the finger.
+  Home's menu (long-press empty space) is Launcher settings and System settings, with the Stay
+  awake pill nearest the finger.
 - `AppIcon` (`Common.kt`): an app icon. On home and in the drawer (`badge = true`) apps with
   notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
   it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
