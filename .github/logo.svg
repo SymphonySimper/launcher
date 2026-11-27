@@ -1,0 +1,22 @@
+<!-- The app icon (app/src/main/res/drawable/ic_launcher_*.xml) as an SVG for the README. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="18 18 72 72">
+  <defs>
+    <clipPath id="icon"><circle cx="54" cy="54" r="36"/></clipPath>
+    <linearGradient id="glow" x1="0" y1="28" x2="0" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ECEAFF"/><stop offset="1" stop-color="#DCE5FB"/>
+    </linearGradient>
+    <linearGradient id="pebble" x1="0" y1="30" x2="0" y2="76" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A6A7FF"/><stop offset="1" stop-color="#3186FF"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="36" x2="0" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A6A7FF"/><stop offset="1" stop-color="#3186FF"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#icon)">
+    <rect x="0" y="0" width="108" height="108" fill="#FFFFFF"/>
+    <path fill="url(#glow)" d="M56,40a12,12 0 1,1 24,0a12,12 0 1,1 -24,0z"/>
+    <path fill="#336EF3" d="M39.5,28a8.5,8.5 0 0,1 8.5,8.5v16.5a4,4 0 0,0 4,4h12.5a8.5,8.5 0 0,1 0,17h-25a8.5,8.5 0 0,1 -8.5,-8.5v-29a8.5,8.5 0 0,1 8.5,-8.5z"/>
+    <path fill="url(#pebble)" d="M41.5,30a8.5,8.5 0 0,1 8.5,8.5v16.5a4,4 0 0,0 4,4h12.5a8.5,8.5 0 0,1 0,17h-25a8.5,8.5 0 0,1 -8.5,-8.5v-29a8.5,8.5 0 0,1 8.5,-8.5z"/>
+    <path fill="none" stroke="url(#ring)" stroke-width="1.8" d="M64.5,42a5.5,5.5 0 1,1 11,0a5.5,5.5 0 1,1 -11,0z"/>
+  </g>
+</svg>
