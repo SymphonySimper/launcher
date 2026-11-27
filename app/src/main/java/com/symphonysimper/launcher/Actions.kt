@@ -137,6 +137,12 @@ fun Context.whatsApp(contact: Contact) {
 
 fun Context.openSystemSettings() = start(Intent(Settings.ACTION_SETTINGS))
 
+/** Whether Developer options is turned on in system settings. */
+fun Context.developerOptionsOn() =
+    Settings.Global.getInt(contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
+
+fun Context.openDeveloperOptions() = start(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+
 /**
  * Pulls down the notification shade. There's no public API for this, so it calls the hidden
  * StatusBarManager.expandNotificationsPanel(), the way other launchers do; it needs EXPAND_STATUS_BAR.
