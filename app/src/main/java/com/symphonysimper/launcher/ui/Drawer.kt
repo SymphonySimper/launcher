@@ -1,13 +1,17 @@
 package com.symphonysimper.launcher.ui
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -25,13 +30,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,16 +47,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.Contact
+import com.symphonysimper.launcher.ENGINES
 import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.appInfo
 import com.symphonysimper.launcher.call
@@ -64,13 +69,14 @@ import com.symphonysimper.launcher.launch
 import com.symphonysimper.launcher.openContact
 import com.symphonysimper.launcher.playStoreSearch
 import com.symphonysimper.launcher.searchContacts
+import com.symphonysimper.launcher.ui.theme.pageBackground
 import com.symphonysimper.launcher.webSearch
 import com.symphonysimper.launcher.whatsApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private const val COLUMNS = 5
+private const val COLUMNS = 4
 
 /** App drawer. When there's a query it shows search results instead of the grid. */
 @Composable
@@ -106,49 +112,20 @@ fun Drawer(
         }
     }
 
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
+    Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 if (query.isBlank()) AppGrid(apps, onClose)
-                else Results(appResults, contacts)
+                else Results(query, appResults, contacts)
             }
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                val searching = query.isNotBlank()
-                if (searching && prefs.playStore) {
-                    val store = remember(LauncherApp.instance.apps.all) {
-                        LauncherApp.instance.apps.all.firstOrNull { it.pkg == "com.android.vending" }
-                    }
-                    FilledTonalIconButton(
-                        onClick = { context.playStoreSearch(query) },
-                        shapes = IconButtonDefaults.shapes(),
-                        modifier = Modifier.size(56.dp),
-                    ) {
-                        if (store != null) Image(store.icon, "Search Play Store", Modifier.size(30.dp))
-                        else Icon(Ic.play, "Search Play Store")
-                    }
-                }
-                SearchField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    placeholder = "Search apps, contacts, web",
-                    focusRequester = focus,
-                    onSearch = ::onEnter,
-                    modifier = Modifier.weight(1f),
-                )
-                if (searching) {
-                    FilledIconButton(
-                        onClick = { context.webSearch(query) },
-                        shapes = IconButtonDefaults.shapes(),
-                        modifier = Modifier.size(56.dp),
-                    ) {
-                        Icon(Ic.globe, "Search the web")
-                    }
-                }
-            }
+            SearchField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = "Search apps, contacts, web",
+                focusRequester = focus,
+                onSearch = ::onEnter,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            )
         }
     }
 }
@@ -183,32 +160,34 @@ private fun AppGrid(apps: List<App>, onClose: () -> Unit) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(COLUMNS),
         modifier = Modifier.fillMaxSize().nestedScroll(pullToClose),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(apps, key = { it.key }) { AppCell(it) }
     }
 }
 
-/** Results sit at the bottom, nearest the search field: contacts, then apps right above the field. */
+/** Results sit at the bottom, nearest the search field: contacts, apps, then the web search row. */
 @Composable
-private fun Results(apps: List<App>, contacts: List<Contact>) {
+private fun Results(query: String, apps: List<App>, contacts: List<Contact>) {
     val context = LocalContext.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier
                 .verticalScroll(rememberScrollState(), reverseScrolling = true)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (contacts.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                val whatsApp = rememberAppIcon("com.whatsapp")
+                Column(verticalArrangement = Arrangement.spacedBy(SplitGap)) {
                     contacts.forEachIndexed { i, contact ->
                         ContactRow(
                             contact = contact,
+                            whatsAppIcon = whatsApp,
                             highlight = apps.isEmpty() && i == 0,
-                            index = i,
-                            count = contacts.size,
+                            top = i == 0,
+                            bottom = i == contacts.lastIndex,
                             onOpen = { context.openContact(contact) },
                             onCall = { context.call(contact) },
                             onWhatsApp = { context.whatsApp(contact) },
@@ -222,6 +201,86 @@ private fun Results(apps: List<App>, contacts: List<Contact>) {
                     repeat(COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
+            WebRow(query, highlight = apps.isEmpty() && contacts.isEmpty())
+        }
+    }
+}
+
+/** The installed app's own icon (e.g. the real WhatsApp logo), or null if it isn't installed. */
+@Composable
+private fun rememberAppIcon(pkg: String?): ImageBitmap? {
+    val all = LauncherApp.instance.apps.all
+    return remember(all, pkg) { all.firstOrNull { it.pkg == pkg }?.icon }
+}
+
+/** One piece of a split row. */
+@Composable
+private fun Segment(
+    shape: Shape,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    highlight: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(if (highlight) colors.secondaryContainer else colors.surfaceBright)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        content = content,
+    )
+}
+
+/** Icon-only end piece of a split row (Play Store, WhatsApp, Call). */
+@Composable
+private fun IconSegment(shape: Shape, width: Dp, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .width(width)
+            .fillMaxSize()
+            .clip(shape)
+            .background(colors.surfaceBright)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+/** Play Store search on the left, web search with the default browser's icon on the right. */
+@Composable
+private fun WebRow(query: String, highlight: Boolean) {
+    val context = LocalContext.current
+    val prefs = LauncherApp.instance.prefs
+    val browserPkg = remember {
+        context.packageManager
+            .resolveActivity(Intent(Intent.ACTION_VIEW, "https://example.com".toUri()), PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo?.packageName
+    }
+    val browser = rememberAppIcon(browserPkg)
+    val store = rememberAppIcon("com.android.vending")
+    val playStore = prefs.playStore
+    Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
+        if (playStore) {
+            IconSegment(splitShape(end = false), 64.dp, onClick = { context.playStoreSearch(query) }) {
+                if (store != null) Image(store, "Search Play Store", Modifier.size(30.dp))
+                else Icon(Ic.play, "Search Play Store")
+            }
+        }
+        Segment(splitShape(start = !playStore), onClick = { context.webSearch(query) }, Modifier.weight(1f), highlight) {
+            if (browser != null) Image(browser, null, Modifier.size(30.dp))
+            else Icon(Ic.globe, null, tint = MaterialTheme.colorScheme.onSurface)
+            Text(
+                ENGINES[prefs.engine]?.first?.let { "Search $it" } ?: "Search the web",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -240,8 +299,8 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppIcon(app, 52.dp)
-            Spacer(Modifier.height(6.dp))
+            AppIcon(app, 56.dp)
+            Spacer(Modifier.height(8.dp))
             Text(
                 app.label,
                 style = MaterialTheme.typography.labelMedium,
@@ -260,54 +319,54 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                     },
                     MenuEntry(Ic.info, "App info") { context.appInfo(app) },
                 ),
-                grouped = true,
+                arrow = true,
                 onDismiss = { menu = false },
             )
         }
     }
 }
 
+/** Contact | WhatsApp | Call. Call is always the end piece, so it stays put for muscle memory. */
 @Composable
 private fun ContactRow(
     contact: Contact,
+    whatsAppIcon: ImageBitmap?,
     highlight: Boolean,
-    index: Int,
-    count: Int,
+    top: Boolean,
+    bottom: Boolean,
     onOpen: () -> Unit,
     onCall: () -> Unit,
     onWhatsApp: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    SegmentedListItem(
-        onClick = onOpen,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
-        colors = ListItemDefaults.segmentedColors(
-            containerColor = if (highlight) colors.secondaryContainer else colors.surfaceContainer,
-        ),
-        leadingContent = {
+    val hasWhatsApp = contact.whatsAppDataId != null
+    val hasCall = contact.phone != null
+    Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
+        Segment(splitShape(top, bottom, end = !hasWhatsApp && !hasCall), onOpen, Modifier.weight(1f), highlight) {
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(40)).background(colors.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(contact.name.take(1).uppercase(), color = colors.onPrimaryContainer, style = MaterialTheme.typography.titleMedium)
             }
-        },
-        supportingContent = contact.phoneLabel?.let { { Text(it) } },
-        trailingContent = {
-            // Call stays in the same spot whether or not the WhatsApp button is there.
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (contact.whatsAppDataId != null) {
-                    FilledTonalIconButton(onClick = onWhatsApp, shapes = IconButtonDefaults.shapes()) { Icon(Ic.chat, "WhatsApp") }
-                } else {
-                    Spacer(Modifier.size(40.dp))
-                }
-                if (contact.phone != null) {
-                    FilledIconButton(onClick = onCall, shapes = IconButtonDefaults.shapes()) { Icon(Ic.phone, "Call") }
+            Column {
+                Text(contact.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                contact.phoneLabel?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, maxLines = 1)
                 }
             }
-        },
-    ) {
-        Text(contact.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (hasWhatsApp) {
+            IconSegment(splitShape(top, bottom, start = false, end = !hasCall), 64.dp, onWhatsApp) {
+                if (whatsAppIcon != null) Image(whatsAppIcon, "WhatsApp", Modifier.size(32.dp))
+                else Icon(Ic.chat, "WhatsApp", tint = colors.onSurface)
+            }
+        }
+        if (hasCall) {
+            IconSegment(splitShape(top, bottom, start = false), 64.dp, onCall) {
+                Icon(Ic.phone, "Call", tint = colors.onSurface)
+            }
+        }
     }
 }
 

@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.LauncherApp
-import com.symphonysimper.launcher.ui.theme.isDark
 
 @Composable
 fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier) {
@@ -133,7 +132,6 @@ fun SearchField(
 class MenuEntry(val icon: ImageVector, val text: String, val onClick: () -> Unit)
 
 private val MenuMinWidth = 200.dp
-private val MenuRadius = 24.dp
 private val ArrowSize = DpSize(18.dp, 9.dp)
 
 /** Places the menu above its anchor (below when there's no room), lined up like Launcher3's popups. */
@@ -154,18 +152,32 @@ private class MenuPosition(val inset: Int, val gap: Int, val margin: Int, val to
 }
 
 /**
- * Lawnchair-style long-press menu, anchored to the composable it's placed in.
- * [grouped]: one card with an arrow pointing at the anchor (app menu); otherwise stacked cards (home menu).
+ * Split shape used across the launcher (menus, search results): big outer corners on the edges
+ * of a group, small inner corners where pieces meet.
  */
+fun splitShape(top: Boolean = true, bottom: Boolean = true, start: Boolean = true, end: Boolean = true): Shape {
+    val big = 24.dp
+    val small = 4.dp
+    return RoundedCornerShape(
+        topStart = if (top && start) big else small,
+        topEnd = if (top && end) big else small,
+        bottomStart = if (bottom && start) big else small,
+        bottomEnd = if (bottom && end) big else small,
+    )
+}
+
+val SplitGap = 2.dp
+
+/** Lawnchair-style long-press menu, anchored to the composable it's placed in. [arrow] points at the anchor. */
 @Composable
-fun LauncherMenu(entries: List<MenuEntry>, grouped: Boolean, onDismiss: () -> Unit) {
+fun LauncherMenu(entries: List<MenuEntry>, arrow: Boolean, onDismiss: () -> Unit) {
     val density = LocalDensity.current
     val statusBar = WindowInsets.statusBars.getTop(density)
-    val position = remember(grouped, statusBar) {
+    val position = remember(arrow, statusBar) {
         with(density) {
             MenuPosition(
                 inset = 26.dp.roundToPx(),
-                gap = (if (grouped) 2.dp else 32.dp).roundToPx(),
+                gap = (if (arrow) 2.dp else 32.dp).roundToPx(),
                 margin = 8.dp.roundToPx(),
                 top = statusBar + 8.dp.roundToPx(),
             )
@@ -173,8 +185,7 @@ fun LauncherMenu(entries: List<MenuEntry>, grouped: Boolean, onDismiss: () -> Un
     }
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) { progress.animateTo(1f, tween(160)) }
-    val colors = MaterialTheme.colorScheme
-    val color = if (colors.isDark) colors.surfaceContainerHigh else colors.surfaceBright
+    val color = MaterialTheme.colorScheme.surfaceBright
     Popup(popupPositionProvider = position, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
         Column(
             Modifier
@@ -187,25 +198,13 @@ fun LauncherMenu(entries: List<MenuEntry>, grouped: Boolean, onDismiss: () -> Un
                     scaleY = scaleX
                     transformOrigin = TransformOrigin(position.arrowX / size.width, if (position.below) 0f else 1f)
                 },
+            verticalArrangement = Arrangement.spacedBy(SplitGap),
         ) {
-            if (grouped && position.below) MenuArrow(position.arrowX, up = true, color)
-            if (grouped) {
-                MenuCard(RoundedCornerShape(MenuRadius), color) { entries.forEach { MenuRow(it, onDismiss) } }
-            } else {
-                entries.forEachIndexed { i, entry ->
-                    val first = i == 0
-                    val last = i == entries.lastIndex
-                    val shape = RoundedCornerShape(
-                        topStart = if (first) MenuRadius else 4.dp,
-                        topEnd = if (first) MenuRadius else 4.dp,
-                        bottomStart = if (last) MenuRadius else 4.dp,
-                        bottomEnd = if (last) MenuRadius else 4.dp,
-                    )
-                    if (!first) Spacer(Modifier.height(2.dp))
-                    MenuCard(shape, color) { MenuRow(entry, onDismiss) }
-                }
+            if (arrow && position.below) MenuArrow(position.arrowX, up = true, color)
+            entries.forEachIndexed { i, entry ->
+                MenuCard(splitShape(top = i == 0, bottom = i == entries.lastIndex), color) { MenuRow(entry, onDismiss) }
             }
-            if (grouped && !position.below) MenuArrow(position.arrowX, up = false, color)
+            if (arrow && !position.below) MenuArrow(position.arrowX, up = false, color)
         }
     }
 }
@@ -245,7 +244,7 @@ private fun MenuArrow(centerX: Int, up: Boolean, color: Color) {
     }
     Box(
         Modifier
-            .offset { IntOffset(centerX - ArrowSize.width.roundToPx() / 2, 0) }
+            .offset { IntOffset(centerX - ArrowSize.width.roundToPx() / 2, SplitGap.roundToPx() * if (up) 1 else -1) }
             .size(ArrowSize)
             .background(color, shape),
     )

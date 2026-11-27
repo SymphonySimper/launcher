@@ -95,7 +95,7 @@ fun Home(
             Surface(
                 onClick = onSearch,
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
+                color = MaterialTheme.colorScheme.surfaceBright,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 34.dp).height(52.dp),
             ) {
                 Box(contentAlignment = Alignment.CenterStart) {
@@ -116,7 +116,7 @@ fun Home(
                         MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
                         MenuEntry(Ic.settings, "System settings", onSystemSettings),
                     ),
-                    grouped = false,
+                    arrow = false,
                     onDismiss = { menuAt = null },
                 )
             }
