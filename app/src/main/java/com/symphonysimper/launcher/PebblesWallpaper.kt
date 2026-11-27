@@ -13,6 +13,9 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import java.io.File
 import kotlin.math.max
 
@@ -41,12 +44,14 @@ class PebblesWallpaper : WallpaperService() {
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             engines += this
+            if (!isPreview) liveEngines++
             setOffsetNotificationsEnabled(false)
             prefs.sp.registerOnSharedPreferenceChangeListener(this)
         }
 
         override fun onDestroy() {
             engines -= this
+            if (!isPreview) liveEngines--
             prefs.sp.unregisterOnSharedPreferenceChangeListener(this)
             photo?.recycle()
             super.onDestroy()
@@ -114,6 +119,14 @@ class PebblesWallpaper : WallpaperService() {
     }
 
     companion object {
+        /**
+         * Engines drawing on the real home or lock screen, not a preview. The service shares the app's
+         * process, so this is how settings knows Pebbles is set: Android won't tell other apps.
+         */
+        private var liveEngines by mutableIntStateOf(0)
+
+        val isActive get() = liveEngines > 0
+
         private val WALLPAPER_KEYS = setOf("wallpaper_images", "same_image", "wallpaper_version")
 
         fun isDark(context: Context) =

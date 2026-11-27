@@ -22,7 +22,6 @@ import com.symphonysimper.launcher.ui.theme.isDark
 import android.app.WallpaperManager
 import android.app.role.RoleManager
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -33,6 +32,7 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonColors
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.material3.TopAppBarDefaults
@@ -126,9 +126,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.symphonysimper.launcher.ui.AppIcon
 import com.symphonysimper.launcher.ui.Ic
@@ -234,15 +232,12 @@ private fun Title(text: String) = Text(text, maxLines = 1, overflow = TextOverfl
 private val itemColors @Composable get() = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright)
 
 @Composable
+private fun SectionHeader(text: String, modifier: Modifier) =
+    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
+
+@Composable
 private fun Group(header: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    if (header != null) {
-        Text(
-            header,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 28.dp, top = 18.dp, bottom = 8.dp),
-        )
-    }
+    if (header != null) SectionHeader(header, Modifier.padding(start = 28.dp, top = 18.dp, bottom = 8.dp))
     Column(
         Modifier.padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
@@ -306,7 +301,8 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     val notify = LocalNotify.current
 
     @Suppress("UNUSED_EXPRESSION") resumes // re-read the checks below after returning from system screens
-    val isDefault = context.getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_HOME)
+    val roles = context.getSystemService(RoleManager::class.java)
+    val isDefault = roles.isRoleHeld(RoleManager.ROLE_HOME)
     val badgeAccess = context.getSystemService(NotificationManager::class.java)
         .isNotificationListenerAccessGranted(ComponentName(context, BadgeService::class.java))
     val contactsAccess = context.hasContactsPermission()
@@ -314,8 +310,7 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     // The role dialog needs to know who is asking, which it only learns when started for a result.
     // If it's dismissed or Android won't show it (after two refusals), open the system's home app picker.
     val askHome = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        val role = context.getSystemService(RoleManager::class.java)
-        if (!role.isRoleHeld(RoleManager.ROLE_HOME)) context.start(Intent(Settings.ACTION_HOME_SETTINGS))
+        if (!roles.isRoleHeld(RoleManager.ROLE_HOME)) context.start(Intent(Settings.ACTION_HOME_SETTINGS))
     }
     val askContacts = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         prefs.contacts = it[Manifest.permission.READ_CONTACTS] == true
@@ -338,7 +333,7 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
             if (!isDefault) {
                 Group {
                     NavRow(0, 1, Ic.home, "Set as default launcher") {
-                        askHome.launch(context.getSystemService(RoleManager::class.java).createRequestRoleIntent(RoleManager.ROLE_HOME))
+                        askHome.launch(roles.createRequestRoleIntent(RoleManager.ROLE_HOME))
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -511,14 +506,7 @@ private fun HiddenPage(onBack: () -> Unit) {
         }
         section(hidden)
         if (hidden.isNotEmpty() && shown.isNotEmpty()) {
-            item(key = "visible-header") {
-                Text(
-                    "Visible",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, top = 14.dp, bottom = 6.dp),
-                )
-            }
+            item(key = "visible-header") { SectionHeader("Visible", Modifier.padding(start = 16.dp, top = 14.dp, bottom = 6.dp)) }
         }
         section(shown)
     }
@@ -620,8 +608,6 @@ private fun WallpaperPage(onBack: () -> Unit) {
             }
         }
 
-        val component = ComponentName(context, PebblesWallpaper::class.java)
-        val active = WallpaperManager.getInstance(context).wallpaperInfo?.component == component
         // Bottom controls sit in thumb reach, lifted clear of the gesture bar.
         Row(
             Modifier
@@ -638,8 +624,7 @@ private fun WallpaperPage(onBack: () -> Unit) {
                     if (images) {
                         PillToggle(
                             Ic.link, "Same image for both", checked = linked,
-                            checkedColor = MaterialTheme.colorScheme.primary,
-                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            colors = pillColors(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary),
                         ) { prefs.sameImage = !prefs.sameImage }
                     }
                     PillToggle(Ic.moon, "Dark", checked = showDark || linked) { showDark = true }
@@ -650,7 +635,7 @@ private fun WallpaperPage(onBack: () -> Unit) {
                     RoundButton(Ic.edit, "$verb $what", size = Sizes.ControlLarge, shape = splitPill(start = false), onClick = pick)
                 }
             }
-            if (!active) {
+            if (!PebblesWallpaper.isActive) {
                 RoundButton(
                     Ic.check, "Set wallpaper",
                     size = Sizes.ControlLarge,
@@ -659,7 +644,7 @@ private fun WallpaperPage(onBack: () -> Unit) {
                 ) {
                     context.start(
                         Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-                            .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component),
+                            .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(context, PebblesWallpaper::class.java)),
                     )
                 }
             }
@@ -729,18 +714,27 @@ private fun SystemBarIcons(lightIcons: Boolean) {
     }
 }
 
+private val PillShapes @Composable get() = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape)
+
+/** A toggle inside a [PillGroup]: see-through until checked. */
+@Composable
+private fun pillColors(
+    checkedColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    checkedContentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+) = ToggleButtonDefaults.colors(
+    containerColor = Color.Transparent,
+    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    checkedContainerColor = checkedColor,
+    checkedContentColor = checkedContentColor,
+)
+
 @Composable
 private fun RowScope.SourceButton(text: String, icon: ImageVector, checked: Boolean, onClick: () -> Unit) {
     ToggleButton(
         checked = checked,
         onCheckedChange = { onClick() },
-        shapes = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape),
-        colors = ToggleButtonDefaults.colors(
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
+        shapes = PillShapes,
+        colors = pillColors(),
         modifier = Modifier.weight(1f).fillMaxHeight().semantics { role = Role.RadioButton },
     ) {
         Icon(icon, null, Modifier.size(ToggleButtonDefaults.IconSize))
@@ -754,20 +748,14 @@ private fun PillToggle(
     icon: ImageVector,
     label: String,
     checked: Boolean,
-    checkedColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    checkedContentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    colors: ToggleButtonColors = pillColors(),
     onClick: () -> Unit,
 ) {
     ToggleButton(
         checked = checked,
         onCheckedChange = { onClick() },
-        shapes = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape),
-        colors = ToggleButtonDefaults.colors(
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            checkedContainerColor = checkedColor,
-            checkedContentColor = checkedContentColor,
-        ),
+        shapes = PillShapes,
+        colors = colors,
         contentPadding = PaddingValues(0.dp),
         modifier = Modifier.width(Sizes.Control).fillMaxHeight(),
     ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
