@@ -111,10 +111,14 @@ fun Home(
 
         menuAt?.let { at ->
             Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
-                ExpressiveMenu(expanded = true, onDismissRequest = { menuAt = null }) {
-                    MenuItem(Ic.tune, "Launcher settings") { menuAt = null; onLauncherSettings() }
-                    MenuItem(Ic.settings, "System settings") { menuAt = null; onSystemSettings() }
-                }
+                LauncherMenu(
+                    listOf(
+                        MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
+                        MenuEntry(Ic.settings, "System settings", onSystemSettings),
+                    ),
+                    grouped = false,
+                    onDismiss = { menuAt = null },
+                )
             }
         }
     }

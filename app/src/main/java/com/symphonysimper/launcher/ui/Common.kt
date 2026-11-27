@@ -1,9 +1,36 @@
 package com.symphonysimper.launcher.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButtonDefaults
@@ -23,9 +50,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Badge
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuPopup
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -106,38 +130,123 @@ fun SearchField(
 }
 
 /** Material 3 Expressive menu: one rounded group in a popup, as in the mockup. */
+class MenuEntry(val icon: ImageVector, val text: String, val onClick: () -> Unit)
+
+private val MenuMinWidth = 200.dp
+private val MenuRadius = 24.dp
+private val ArrowSize = DpSize(18.dp, 9.dp)
+
+/** Places the menu above its anchor (below when there's no room), lined up like Launcher3's popups. */
+private class MenuPosition(val inset: Int, val gap: Int, val margin: Int, val top: Int) : PopupPositionProvider {
+    var below by mutableStateOf(false)
+    var arrowX by mutableIntStateOf(0)
+
+    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
+        val cx = anchorBounds.center.x
+        val w = popupContentSize.width
+        val left = if (cx - inset + w <= windowSize.width - margin) cx - inset else cx + inset - w
+        val x = left.coerceIn(margin, (windowSize.width - margin - w).coerceAtLeast(margin))
+        val above = anchorBounds.top - gap - popupContentSize.height
+        below = above < top
+        arrowX = cx - x
+        return IntOffset(x, if (below) anchorBounds.bottom + gap else above)
+    }
+}
+
+/**
+ * Lawnchair-style long-press menu, anchored to the composable it's placed in.
+ * [grouped]: one card with an arrow pointing at the anchor (app menu); otherwise stacked cards (home menu).
+ */
 @Composable
-fun ExpressiveMenu(expanded: Boolean, onDismissRequest: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun LauncherMenu(entries: List<MenuEntry>, grouped: Boolean, onDismiss: () -> Unit) {
+    val density = LocalDensity.current
+    val statusBar = WindowInsets.statusBars.getTop(density)
+    val position = remember(grouped, statusBar) {
+        with(density) {
+            MenuPosition(
+                inset = 26.dp.roundToPx(),
+                gap = (if (grouped) 2.dp else 32.dp).roundToPx(),
+                margin = 8.dp.roundToPx(),
+                top = statusBar + 8.dp.roundToPx(),
+            )
+        }
+    }
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { progress.animateTo(1f, tween(160)) }
     val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(28.dp)
-    DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismissRequest) {
-        DropdownMenuGroup(
-            shapes = MenuDefaults.groupShapes(shape, shape),
-            containerColor = if (colors.isDark) colors.surfaceContainerHighest else colors.surfaceBright,
-            shadowElevation = 8.dp,
-            contentPadding = PaddingValues(8.dp),
-            content = content,
-        )
+    val color = if (colors.isDark) colors.surfaceContainerHigh else colors.surfaceBright
+    Popup(popupPositionProvider = position, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        Column(
+            Modifier
+                .widthIn(min = MenuMinWidth)
+                .width(IntrinsicSize.Max)
+                .padding(vertical = 4.dp)
+                .graphicsLayer {
+                    alpha = progress.value
+                    scaleX = 0.92f + 0.08f * progress.value
+                    scaleY = scaleX
+                    transformOrigin = TransformOrigin(position.arrowX / size.width, if (position.below) 0f else 1f)
+                },
+        ) {
+            if (grouped && position.below) MenuArrow(position.arrowX, up = true, color)
+            if (grouped) {
+                MenuCard(RoundedCornerShape(MenuRadius), color) { entries.forEach { MenuRow(it, onDismiss) } }
+            } else {
+                entries.forEachIndexed { i, entry ->
+                    val first = i == 0
+                    val last = i == entries.lastIndex
+                    val shape = RoundedCornerShape(
+                        topStart = if (first) MenuRadius else 4.dp,
+                        topEnd = if (first) MenuRadius else 4.dp,
+                        bottomStart = if (last) MenuRadius else 4.dp,
+                        bottomEnd = if (last) MenuRadius else 4.dp,
+                    )
+                    if (!first) Spacer(Modifier.height(2.dp))
+                    MenuCard(shape, color) { MenuRow(entry, onDismiss) }
+                }
+            }
+            if (grouped && !position.below) MenuArrow(position.arrowX, up = false, color)
+        }
     }
 }
 
 @Composable
-fun MenuItem(icon: ImageVector, text: String, onClick: () -> Unit) {
+private fun MenuCard(shape: Shape, color: Color, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().shadow(3.dp, shape).background(color, shape).clip(shape), content = content)
+}
+
+@Composable
+private fun MenuRow(entry: MenuEntry, onDismiss: () -> Unit) {
     Row(
         Modifier
-            .widthIn(min = 208.dp)
-            .height(56.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
-            .padding(start = 8.dp, end = 20.dp),
+            .fillMaxWidth()
+            .height(52.dp)
+            .clickable { onDismiss(); entry.onClick() }
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        val colors = MaterialTheme.colorScheme
-        Box(
-            Modifier.size(40.dp).clip(CircleShape).background(if (colors.isDark) colors.primaryContainer else colors.secondaryContainer),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, Modifier.size(20.dp), tint = colors.onSurface) }
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+        Icon(entry.icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
+        Text(entry.text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false)
     }
+}
+
+@Composable
+private fun MenuArrow(centerX: Int, up: Boolean, color: Color) {
+    val shape = remember(up) {
+        GenericShape { size, _ ->
+            if (up) {
+                moveTo(size.width / 2, 0f); lineTo(size.width, size.height); lineTo(0f, size.height)
+            } else {
+                moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height)
+            }
+            close()
+        }
+    }
+    Box(
+        Modifier
+            .offset { IntOffset(centerX - ArrowSize.width.roundToPx() / 2, 0) }
+            .size(ArrowSize)
+            .background(color, shape),
+    )
 }

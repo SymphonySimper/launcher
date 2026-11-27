@@ -251,13 +251,18 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
-        ExpressiveMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            MenuItem(Ic.hide, "Hide") {
-                menu = false
-                val prefs = LauncherApp.instance.prefs
-                prefs.hidden = prefs.hidden + app.key
-            }
-            MenuItem(Ic.info, "App info") { menu = false; context.appInfo(app) }
+        if (menu) {
+            LauncherMenu(
+                listOf(
+                    MenuEntry(Ic.hide, "Hide") {
+                        val prefs = LauncherApp.instance.prefs
+                        prefs.hidden = prefs.hidden + app.key
+                    },
+                    MenuEntry(Ic.info, "App info") { context.appInfo(app) },
+                ),
+                grouped = true,
+                onDismiss = { menu = false },
+            )
         }
     }
 }
