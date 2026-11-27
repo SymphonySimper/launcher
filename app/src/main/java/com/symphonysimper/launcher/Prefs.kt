@@ -29,7 +29,6 @@ class Prefs(context: Context) {
     var sameImage by bool("same_image", false)
     /** Bumped whenever a wallpaper image file changes, so the wallpaper redraws. */
     var wallpaperVersion by int("wallpaper_version", 0)
-    var tilePrompted by bool("tile_prompted", false)
     var stayAwake by bool("stay_awake", false)
     var savedTimeout by int("saved_timeout", 60_000)
     var notificationsAsked by bool("notifications_asked", false)

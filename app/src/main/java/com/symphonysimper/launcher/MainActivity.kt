@@ -64,15 +64,6 @@ class MainActivity : ComponentActivity() {
         setContent { LauncherTheme { LauncherRoot(resetSignal) } }
     }
 
-    override fun onResume() {
-        super.onResume()
-        val prefs = LauncherApp.instance.prefs
-        if (!prefs.tilePrompted) {
-            prefs.tilePrompted = true
-            requestAddTile()
-        }
-    }
-
     override fun onStop() {
         super.onStop()
         resetSignal++

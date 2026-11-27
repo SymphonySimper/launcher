@@ -11,13 +11,11 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
-import android.graphics.drawable.Icon
 import android.app.StatusBarManager
 import android.provider.AlarmClock
 import android.provider.CalendarContract
@@ -142,14 +140,6 @@ fun Context.expandNotifications() {
     }
 }
 
-fun Context.requestAddTile() {
-    getSystemService(StatusBarManager::class.java)?.requestAddTileService(
-        ComponentName(this, StayAwakeTile::class.java),
-        getString(R.string.tile_label),
-        Icon.createWithResource(this, R.drawable.ic_tile),
-        mainExecutor,
-    ) { }
-}
 
 /** Keeps this activity upright while Portrait only is on, following the setting as it changes. */
 fun ComponentActivity.followPortraitOnly() {

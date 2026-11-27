@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Wallpaper settings can make the lock screen show the home wallpaper again. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!-- Stay awake sets the screen timeout to never while it's on. -->
     <uses-permission
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -63,14 +64,9 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/settings_label"
-            android:windowSoftInputMode="adjustResize">
-            <!-- Long-pressing the Stay awake tile opens settings. -->
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
-            </intent-filter>
-        </activity>
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".PebblesWallpaper"
@@ -85,30 +81,9 @@
                 android:resource="@xml/wallpaper" />
         </service>
 
-        <service
-            android:name=".StayAwakeTile"
-            android:exported="true"
-            android:icon="@drawable/ic_tile"
-            android:label="@string/tile_label"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
-                android:value="true" />
-        </service>
-
         <receiver
             android:name=".StayAwakeOffReceiver"
             android:exported="false" />
-
-        <activity
-            android:name=".NotificationPermissionActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:taskAffinity=""
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service
             android:name=".BadgeService"
