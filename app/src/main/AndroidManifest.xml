@@ -64,6 +64,7 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="@string/settings_label"
+            android:theme="@style/Theme.Launcher.Settings"
             android:windowSoftInputMode="adjustResize" />
 
         <service

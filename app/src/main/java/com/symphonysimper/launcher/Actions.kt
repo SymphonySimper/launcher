@@ -2,6 +2,7 @@ package com.symphonysimper.launcher
 
 import android.Manifest
 import android.app.ActivityOptions
+import android.window.SplashScreen
 import android.content.pm.ActivityInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.snapshotFlow
@@ -37,15 +38,22 @@ const val WHATSAPP_MIME = "vnd.android.cursor.item/vnd.com.whatsapp.profile"
 
 fun Context.toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
 
-fun Context.start(intent: Intent) {
+fun Context.start(intent: Intent, options: Bundle? = null) {
     try {
-        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
     } catch (_: ActivityNotFoundException) {
         toast("No app can open this")
     } catch (_: SecurityException) {
         toast("Not allowed")
     }
 }
+
+/**
+ * Opens one of the launcher's own screens. Android would show a splash screen with the launcher's
+ * icon first, as if it were starting an app; a plain page-coloured window is quicker and calmer.
+ */
+fun Context.startOwn(intent: Intent) =
+    start(intent, ActivityOptions.makeBasic().setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR).toBundle())
 
 /**
  * Opens [app]. Given the icon's [bounds] within [view], the app grows out of the icon as it does in
