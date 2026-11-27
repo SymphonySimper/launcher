@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.LauncherApp
+import com.symphonysimper.launcher.ui.theme.Sizes
 
 @Composable
 fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier) {
@@ -91,7 +92,7 @@ fun searchBarBottom(): Dp = if (keyboardOpen()) 10.dp else 24.dp
 
 /** Height the launcher's bottom search bar takes up, so home and drawer content stay clear of it. */
 @Composable
-fun searchBarSpace(): Dp = 10.dp + 56.dp + searchBarBottom()
+fun searchBarSpace(): Dp = 10.dp + Sizes.Control + searchBarBottom()
 
 /** Pill search field used in the launcher and in app lists. */
 @Composable
@@ -116,7 +117,7 @@ fun SearchField(
         decorationBox = { field ->
             Row(
                 Modifier
-                    .height(56.dp)
+                    .height(Sizes.Control)
                     .clip(CircleShape)
                     .background(color)
                     .padding(start = 18.dp, end = 4.dp),
@@ -128,7 +129,9 @@ fun SearchField(
                 }
                 Box(Modifier.weight(1f)) { field() }
                 if (value.isNotEmpty()) {
-                    IconButton(onClick = { onValueChange("") }, shapes = IconButtonDefaults.shapes()) { Icon(Ic.close, "Clear") }
+                    IconButton(onClick = { onValueChange("") }, shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(Sizes.MinTouch)) {
+                        Icon(Ic.close, "Clear")
+                    }
                 } else {
                     Spacer(Modifier.width(14.dp))
                 }
@@ -228,13 +231,13 @@ private fun MenuRow(entry: MenuEntry, onDismiss: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(Sizes.Control)
             .clickable { onDismiss(); entry.onClick() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Icon(entry.icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
+        Icon(entry.icon, null, Modifier.size(Sizes.Icon), tint = MaterialTheme.colorScheme.onSurface)
         Text(entry.text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false)
     }
 }

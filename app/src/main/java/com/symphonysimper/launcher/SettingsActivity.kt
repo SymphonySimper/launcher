@@ -2,6 +2,7 @@ package com.symphonysimper.launcher
 
 import android.Manifest
 import android.app.NotificationManager
+import com.symphonysimper.launcher.ui.theme.Sizes
 import android.app.WallpaperManager
 import android.app.role.RoleManager
 import android.content.ComponentName
@@ -200,7 +201,9 @@ private fun PageScaffold(
             title = { Text(title) },
             navigationIcon = {
                 if (onBack != null) {
-                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(Ic.back, "Back") }
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(Sizes.MinTouch)) {
+                        Icon(Ic.back, "Back")
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = background, scrolledContainerColor = background),
@@ -408,7 +411,11 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                         },
                     leadingContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { prefs.dock = prefs.dock - key }, shapes = IconButtonDefaults.shapes()) {
+                            IconButton(
+                                onClick = { prefs.dock = prefs.dock - key },
+                                shapes = IconButtonDefaults.shapes(),
+                                modifier = Modifier.size(Sizes.MinTouch),
+                            ) {
                                 Icon(Ic.remove, "Remove")
                             }
                             AppIcon(app, 40.dp)
@@ -422,7 +429,7 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
             FilledTonalButton(
                 onClick = onAdd,
                 shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth().padding(12.dp).height(56.dp),
+                modifier = Modifier.fillMaxWidth().padding(12.dp).height(Sizes.Control),
             ) {
                 Icon(Ic.add, null)
                 Spacer(Modifier.width(8.dp))

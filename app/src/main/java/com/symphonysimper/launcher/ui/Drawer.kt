@@ -74,6 +74,7 @@ import com.symphonysimper.launcher.whatsApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.symphonysimper.launcher.ui.theme.Sizes
 
 private const val COLUMNS = 4
 
@@ -222,7 +223,7 @@ private fun IconSegment(shape: Shape, highlight: Boolean, onClick: () -> Unit, c
     val colors = MaterialTheme.colorScheme
     Box(
         Modifier
-            .width(64.dp)
+            .width(Sizes.ControlLarge)
             .fillMaxSize()
             .clip(shape)
             .background(if (highlight) colors.secondaryContainer else colors.surfaceBright)
@@ -244,15 +245,15 @@ private fun WebRow(query: String, highlight: Boolean) {
     val browser = rememberAppIcon(browserPkg)
     val store = rememberAppIcon("com.android.vending")
     val playStore = prefs.playStore
-    Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
+    Row(Modifier.fillMaxWidth().height(Sizes.ControlLarge), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
         if (playStore) {
             IconSegment(splitShape(end = false), highlight, onClick = { context.playStoreSearch(query) }) {
-                if (store != null) Image(store, "Search Play Store", Modifier.size(30.dp))
+                if (store != null) Image(store, "Search Play Store", Modifier.size(32.dp))
                 else Icon(Ic.play, "Search Play Store")
             }
         }
         Segment(splitShape(start = !playStore), onClick = { context.webSearch(query) }, Modifier.weight(1f), highlight) {
-            if (browser != null) Image(browser, null, Modifier.size(30.dp))
+            if (browser != null) Image(browser, null, Modifier.size(32.dp))
             else Icon(Ic.globe, null, tint = MaterialTheme.colorScheme.onSurface)
             Text(
                 ENGINES[prefs.engine]?.first?.let { "Search $it" } ?: "Search the web",
@@ -322,7 +323,7 @@ private fun ContactRow(
     val colors = MaterialTheme.colorScheme
     val hasWhatsApp = contact.whatsAppDataId != null
     val hasCall = contact.phone != null
-    Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
+    Row(Modifier.fillMaxWidth().height(Sizes.ControlLarge), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
         Segment(splitShape(top, bottom, end = !hasWhatsApp && !hasCall), onOpen, Modifier.weight(1f), highlight) {
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(40)).background(if (highlight) colors.surfaceBright else colors.primaryContainer),
