@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,6 +173,16 @@ private fun rememberAppIcon(pkg: String?): ImageBitmap? {
     return remember(all, pkg) { all.firstOrNull { it.pkg == pkg }?.icon }
 }
 
+/** Look and tap target shared by every piece of a split row. */
+@Composable
+private fun Modifier.segment(shape: Shape, highlight: Boolean, onClick: () -> Unit): Modifier {
+    val colors = MaterialTheme.colorScheme
+    return fillMaxSize()
+        .clip(shape)
+        .background(if (highlight) colors.secondaryContainer else colors.surfaceBright)
+        .clickable(onClick = onClick)
+}
+
 /** One piece of a split row. */
 @Composable
 private fun Segment(
@@ -180,34 +191,26 @@ private fun Segment(
     modifier: Modifier = Modifier,
     highlight: Boolean = false,
     content: @Composable RowScope.() -> Unit,
-) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        modifier
-            .fillMaxSize()
-            .clip(shape)
-            .background(if (highlight) colors.secondaryContainer else colors.surfaceBright)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        content = content,
-    )
+) = Row(
+    modifier.segment(shape, highlight, onClick).padding(horizontal = 16.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+    content = content,
+)
+
+/** Icon-only end piece of a split row (Play Store, WhatsApp, Call): the app's own icon, or [fallback]. */
+@Composable
+private fun IconSegment(shape: Shape, highlight: Boolean, image: ImageBitmap?, fallback: ImageVector, label: String, onClick: () -> Unit) {
+    Box(Modifier.width(Sizes.ControlLarge).segment(shape, highlight, onClick), contentAlignment = Alignment.Center) {
+        ResultIcon(image, fallback, label)
+    }
 }
 
-/** Icon-only end piece of a split row (Play Store, WhatsApp, Call). */
+/** An app's own icon in search results, or a plain [fallback] icon when that app isn't installed. */
 @Composable
-private fun IconSegment(shape: Shape, highlight: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Box(
-        Modifier
-            .width(Sizes.ControlLarge)
-            .fillMaxSize()
-            .clip(shape)
-            .background(if (highlight) colors.secondaryContainer else colors.surfaceBright)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { content() }
+private fun ResultIcon(image: ImageBitmap?, fallback: ImageVector, label: String?) {
+    if (image != null) Image(image, label, Modifier.size(32.dp))
+    else Icon(fallback, label, tint = MaterialTheme.colorScheme.onSurface)
 }
 
 /** Play Store search on the left, web search with the default browser's icon on the right. */
@@ -225,14 +228,10 @@ private fun WebRow(query: String, highlight: Boolean) {
     val playStore = prefs.playStore
     Row(Modifier.fillMaxWidth().height(Sizes.ControlLarge), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
         if (playStore) {
-            IconSegment(splitShape(end = false), highlight, onClick = { context.playStoreSearch(query) }) {
-                if (store != null) Image(store, "Search Play Store", Modifier.size(32.dp))
-                else Icon(Ic.play, "Search Play Store")
-            }
+            IconSegment(splitShape(end = false), highlight, store, Ic.play, "Search Play Store") { context.playStoreSearch(query) }
         }
         Segment(splitShape(start = !playStore), onClick = { context.webSearch(query) }, Modifier.weight(1f), highlight) {
-            if (browser != null) Image(browser, null, Modifier.size(32.dp))
-            else Icon(Ic.globe, null, tint = MaterialTheme.colorScheme.onSurface)
+            ResultIcon(browser, Ic.globe, null)
             Text(
                 ENGINES[prefs.engine]?.first?.let { "Search $it" } ?: "Search the web",
                 style = MaterialTheme.typography.bodyLarge,
@@ -312,17 +311,9 @@ private fun ContactRow(
             Text(contact.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (hasWhatsApp) {
-            IconSegment(splitShape(top, bottom, start = false, end = !hasCall), highlight, onWhatsApp) {
-                if (whatsAppIcon != null) Image(whatsAppIcon, "WhatsApp", Modifier.size(32.dp))
-                else Icon(Ic.chat, "WhatsApp", tint = colors.onSurface)
-            }
+            IconSegment(splitShape(top, bottom, start = false, end = !hasCall), highlight, whatsAppIcon, Ic.chat, "WhatsApp", onWhatsApp)
         }
-        if (hasCall) {
-            IconSegment(splitShape(top, bottom, start = false), highlight, onCall) {
-                if (phoneIcon != null) Image(phoneIcon, "Call", Modifier.size(32.dp))
-                else Icon(Ic.phone, "Call", tint = colors.onSurface)
-            }
-        }
+        if (hasCall) IconSegment(splitShape(top, bottom, start = false), highlight, phoneIcon, Ic.phone, "Call", onCall)
     }
 }
 
