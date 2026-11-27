@@ -40,6 +40,7 @@ class PebblesWallpaper : WallpaperService() {
         private var photo: Bitmap? = null
         private var photoKey: String? = null
         private var shownKey: String? = null
+        private var drawnFrame: String? = null
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
@@ -64,6 +65,11 @@ class PebblesWallpaper : WallpaperService() {
             draw()
         }
 
+        override fun onSurfaceCreated(holder: SurfaceHolder) {
+            super.onSurfaceCreated(holder)
+            drawnFrame = null
+        }
+
         override fun onSurfaceRedrawNeeded(holder: SurfaceHolder) = draw()
 
         override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
@@ -80,15 +86,20 @@ class PebblesWallpaper : WallpaperService() {
         fun draw() {
             if (width == 0 || height == 0) return
             val dark = isDark(this@PebblesWallpaper)
+            val image = if (prefs.wallpaperImages) photoFor(dark) else null
+            val shown = "$dark:${if (image != null) photoKey else "pebbles"}"
+            val frame = "$width:$height:$shown"
+            // The system asks for several redraws of an unchanged surface while it sets the wallpaper up,
+            // and each post made while the last is still queued takes another screen-sized buffer.
+            if (frame == drawnFrame) return
             val holder = surfaceHolder
             val canvas = try { holder.lockHardwareCanvas() } catch (_: Exception) { null } ?: return
-            val image = if (prefs.wallpaperImages) photoFor(dark) else null
             try {
                 if (image != null) drawCentreCrop(canvas, image) else Pebbles.draw(canvas, width.toFloat(), height.toFloat(), dark)
             } finally {
                 holder.unlockCanvasAndPost(canvas)
             }
-            val shown = "$dark:${if (image != null) photoKey else "pebbles"}"
+            drawnFrame = frame
             if (shown != shownKey) {
                 shownKey = shown
                 notifyColorsChanged()
