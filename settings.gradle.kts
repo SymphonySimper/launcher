@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "launcher"
 include(":app")
+include(":baselineprofile")

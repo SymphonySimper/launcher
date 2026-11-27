@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 /** Commits up to HEAD; 1 outside a git checkout. Needs full history (CI checks out with fetch-depth 0). */
@@ -58,6 +59,22 @@ android {
     }
 }
 
+androidComponents {
+    // The baseline profile plugin copies release into this build type to record the profile from. It must
+    // keep real class names, or the profile won't match anything in the release build. This runs after the
+    // plugin has made the build type.
+    finalizeDsl { android ->
+        android.buildTypes.findByName("nonMinifiedRelease")?.optimization?.enable = false
+    }
+}
+
+baselineProfile {
+    // Generated on a phone with `./gradlew :app:generateBaselineProfile` (see baselineprofile/) and
+    // committed under src/release/generated, so normal builds and CI never need a device.
+    // Startup code is also packed into the first dex file, so less of it is read from disk at launch.
+    dexLayoutOptimization = true
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -66,5 +83,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    // Compiles the baseline profile on phones that don't get it from Play, which is all of ours.
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

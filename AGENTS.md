@@ -19,6 +19,12 @@ launcher fast, lean and idle when nothing is happening:
   larger than they're shown.
 - **Prove it on the release build** (`./gradlew -q :app:installRelease`): compare `dumpsys meminfo`
   and `dumpsys gfxinfo` before and after anything that might cost memory or frames.
+- **Keep the baseline profile current.** `baselineprofile/` records the code home, the drawer and
+  search run, so it's compiled ahead of time; the result is committed in `app/src/release/generated`.
+  After adding a screen or reworking a main path, extend `Journeys.kt` and regenerate with
+  `./gradlew :app:generateBaselineProfile -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true`
+  (the flag keeps Gradle from uninstalling the launcher and wiping its settings). It restarts the app,
+  so set the wallpaper and default home again afterwards. `LauncherBenchmarks` measures the gain.
 - Don't use `setFixedSize` on the wallpaper surface: wallpapers must size from layout, and the crash
   resets the user's wallpaper and default home app.
 
