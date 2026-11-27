@@ -138,12 +138,12 @@ private fun Results(query: String, apps: List<App>, contacts: List<Contact>, bot
                 val whatsApp = rememberAppIcon("com.whatsapp")
                 val phone = rememberAppIcon(remember { context.getSystemService(TelecomManager::class.java).defaultDialerPackage })
                 Column(verticalArrangement = Arrangement.spacedBy(SplitGap)) {
-                    contacts.forEachIndexed { i, contact ->
+                    contacts.asReversed().forEachIndexed { i, contact ->
                         ContactRow(
                             contact = contact,
                             whatsAppIcon = whatsApp,
                             phoneIcon = phone,
-                            highlight = apps.isEmpty() && i == 0,
+                            highlight = apps.isEmpty() && i == contacts.lastIndex,
                             top = i == 0,
                             bottom = i == contacts.lastIndex,
                             onOpen = { context.openContact(contact) },

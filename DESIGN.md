@@ -131,7 +131,8 @@ covers both with no seam.
   the drawer (`MainActivity.kt`). Its gap above the gesture bar shrinks when the keyboard is up
   (`searchBarBottom()`).
 - **Results grow upwards.** Order from the top: web search, contacts, then apps nearest the thumb.
-  The best match is highlighted with `secondaryContainer`, because Enter opens it.
+  Contacts run best match last, so the best one sits nearest the thumb. The best match is
+  highlighted with `secondaryContainer`, because Enter opens it.
 - **Muscle memory.** Things stay in the same place: Call is always the last piece of a contact row,
   even when WhatsApp is missing.
 - **Floating controls** (wallpaper page): top row under the status bar, bottom row lifted by
