@@ -51,6 +51,16 @@ class App(
     val pkg: String get() = component.packageName
 }
 
+private sealed interface ThemedApps {
+    data object All : ThemedApps
+    data class Only(val keys: Set<String>) : ThemedApps
+
+    fun of(apps: List<App>): List<App> = when (this) {
+        All -> apps
+        is Only -> apps.filter { it.key in keys }
+    }
+}
+
 private val DEFAULT_HIDDEN = setOf("com.android.vending", "com.android.settings", "com.android.stk")
 
 class AppRepository(private val context: Context, private val prefs: Prefs) {
@@ -58,7 +68,7 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val icons = ConcurrentHashMap<String, ImageBitmap>()
     private val monochromes = mutableStateMapOf<String, ImageBitmap>()
-    private val noMonochrome = HashSet<String>()
+    private val noMonochrome = ConcurrentHashMap.newKeySet<String>()
     private var loadJob: Job? = null
 
     var all by mutableStateOf<List<App>>(emptyList())
@@ -68,16 +78,16 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
         launcherApps.registerCallback(callback, Handler(Looper.getMainLooper()))
         reload()
         scope.launch(Dispatchers.Main) {
-            snapshotFlow { themedKeys() }.drop(1).collectLatest { syncMonochromes(it, all) }
+            snapshotFlow { themedApps() }.drop(1).collectLatest { syncMonochromes(it, all) }
         }
     }
 
     fun monochrome(key: String): ImageBitmap? = monochromes[key]
 
-    private fun themedKeys(): Set<String>? = when {
-        prefs.themedDrawer -> null
-        prefs.themedDock -> prefs.dock.toSet()
-        else -> emptySet()
+    private fun themedApps(): ThemedApps = when {
+        prefs.themedDrawer -> ThemedApps.All
+        prefs.themedDock -> ThemedApps.Only(prefs.dock.toSet())
+        else -> ThemedApps.Only(emptySet())
     }
 
     fun find(key: String): App? = all.firstOrNull { it.key == key }
@@ -87,7 +97,7 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
         loadJob = scope.launch {
             val list = load()
             withContext(Dispatchers.Main) {
-                syncMonochromes(themedKeys(), list)
+                syncMonochromes(themedApps(), list)
                 all = list
                 if (!prefs.initialized) applyDefaults(list)
             }
@@ -115,8 +125,8 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
             .sortedWith { a, b -> collator.compare(a.label, b.label) }
     }
 
-    private suspend fun syncMonochromes(themed: Set<String>?, apps: List<App>) {
-        val wanted = if (themed == null) apps else apps.filter { it.key in themed }
+    private suspend fun syncMonochromes(themed: ThemedApps, apps: List<App>) {
+        val wanted = themed.of(apps)
         val keep = wanted.mapTo(HashSet()) { it.key }
         (monochromes.keys - keep).forEach { monochromes.remove(it) }
         val missing = wanted.filter { it.key !in monochromes && it.key !in noMonochrome }
@@ -200,7 +210,7 @@ object IconRenderer {
         val mono = (icon as? AdaptiveIconDrawable)?.monochrome ?: return null
         val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
-        val outset = size / 4
+        val outset = (size * AdaptiveIconDrawable.getExtraInsetFraction()).toInt()
         mono.setBounds(-outset, -outset, size + outset, size + outset)
         mono.draw(canvas)
         canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC_IN)
