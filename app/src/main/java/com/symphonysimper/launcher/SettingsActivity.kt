@@ -377,8 +377,9 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                 })
             }
             Group("More") {
-                NavRow(0, 2, Ic.download, "Back up settings") { export.launch("launcher-backup.json") }
-                NavRow(1, 2, Ic.upload, "Restore settings") { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                NavRow(0, 3, Ic.download, "Back up settings") { export.launch("launcher-backup.json") }
+                NavRow(1, 3, Ic.upload, "Restore settings") { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                NavRow(2, 3, Ic.bug, "Report a bug") { context.reportBug() }
             }
         }
     }

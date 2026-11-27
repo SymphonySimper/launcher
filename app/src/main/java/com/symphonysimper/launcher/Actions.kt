@@ -9,6 +9,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.content.ActivityNotFoundException
@@ -126,6 +127,16 @@ fun Context.whatsApp(contact: Contact) {
 }
 
 fun Context.openSystemSettings() = start(Intent(Settings.ACTION_SETTINGS))
+
+fun Context.reportBug() {
+    val url = "https://github.com/SymphonySimper/launcher/issues/new".toUri().buildUpon()
+        .appendQueryParameter("template", "bug.yml")
+        .appendQueryParameter("version", packageManager.getPackageInfo(packageName, 0).versionName)
+        .appendQueryParameter("android", Build.VERSION.RELEASE)
+        .appendQueryParameter("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
+        .build()
+    start(Intent(Intent.ACTION_VIEW, url))
+}
 
 /**
  * Pulls down the notification shade. There's no public API for this, so it calls the hidden
