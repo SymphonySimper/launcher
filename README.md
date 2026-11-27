@@ -4,19 +4,24 @@ A small, fast Android home screen built with Jetpack Compose and Material 3 Expr
 search-first app and contact lookup, a dock, the Pebbles live wallpaper and Stay awake, which keeps
 the screen on from home's long-press menu until the phone is locked.
 
+## Building
+
+The [justfile](justfile) has the common tasks; run `just` to list them. `just install` puts the
+optimised release build on a connected phone, and `just backup` / `just restore` save and bring back
+the launcher's settings over adb. It uses Android Studio's bundled JDK when `JAVA_HOME` isn't set.
+
 ## Releasing
 
 Every push to `main` is built by the Build workflow. To publish a release, fast-forward the `release`
 branch to main:
 
 ```sh
-git push origin main:release
+just release   # or: git push origin main:release
 ```
 
 The Release workflow then builds a signed APK and publishes it as a GitHub release. The version is
 `<commit date>.<commit count>` (like `2026.11.27.412`), and the count makes every release install
-over the one before it. Signing uses the secrets
-listed at the top of [release.yml](.github/workflows/release.yml).
+over the one before it. Signing uses the secrets listed at the top of [release.yml](.github/workflows/release.yml).
 
 ## Thanks
 
