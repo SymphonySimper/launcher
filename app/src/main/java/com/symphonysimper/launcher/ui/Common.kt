@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.content.Intent
 import android.graphics.Rect
 import android.view.View
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -82,6 +83,7 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalView
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.launch
+import com.symphonysimper.launcher.open
 import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.ui.theme.Sizes
 
@@ -92,10 +94,12 @@ class LaunchSource(private val view: View) {
     /** Goes on the icon itself (not its whole cell), as Launcher3 animates from the icon. */
     val modifier = Modifier.onPlaced { icon = it }
 
-    fun launch(app: App) {
-        val bounds = icon?.takeIf { it.isAttached }?.boundsInRoot()
-        view.context.launch(app, view, bounds?.run { Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()) })
-    }
+    private val bounds get() = icon?.takeIf { it.isAttached }?.boundsInRoot()?.run { Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()) }
+
+    fun launch(app: App) = view.context.launch(app, view, bounds)
+
+    /** Opens [intent], growing it out of whatever this source's [modifier] is on. */
+    fun open(intent: Intent, fallback: Intent? = null) = view.context.open(intent, fallback, view, bounds)
 }
 
 @Composable

@@ -49,8 +49,8 @@ Pebbles wallpaper palette (see [Wallpaper](#wallpaper)).
 
 - Everything is **regular weight**. `RegularType` in `Theme.kt` removes Material's medium weight,
   because some phones draw it nearly bold. Don't set `FontWeight.Medium` or `Bold`.
-- Row and result text: `bodyLarge`. App labels under icons: `labelMedium`. Section headers:
-  `labelLarge` in `onSurfaceVariant`.
+- Row and result text: `bodyLarge`. App labels under icons: `bodyMedium` with no letter spacing,
+  so names like "HDFC Bank App" fit. Section headers: `labelLarge` in `onSurfaceVariant`.
 - Row titles are one line with an ellipsis (`Title()` in settings).
 - The home clock is the one custom style (84sp, tight letter spacing). Don't add more.
 
@@ -65,8 +65,12 @@ is missing, add a token there.
 | `Control` | 56dp | Buttons, toggles, menu rows, the search field. |
 | `ControlLarge` | 64dp | Search result rows and controls floating over content. |
 | `Icon` | 24dp | Icons. |
-| `AppIcon` | 56dp | App icons on home and in the drawer (40dp inside settings rows). |
+| `AppIcon` | 56dp | App icons in the dock (40dp inside settings rows). |
+| `DrawerIcon` | 60dp | App icons in the drawer. Icons are rendered at this size. |
 | `ThumbLift` | 40dp | Extra space under bottom floating controls, above the gesture bar. |
+
+The drawer is roomy, matched to Lawnchair's: 60dp icons, a 10dp gap to the label, 8dp padding inside
+each cell and 12dp between rows (about 120dp a row), with 24dp above the first row.
 
 Spacing that keeps coming up: 12dp side padding for lists and groups, 16dp padding inside rows,
 `SplitGap` (2dp) between joined pieces, `ListItemDefaults.SegmentedGap` between settings rows.
@@ -191,13 +195,19 @@ only for failures in `Actions.kt`, which runs outside Compose.
 - The drawer's progress is read only inside `graphicsLayer` and draw lambdas, so following the finger
   never recomposes. Do the same for anything animated every frame. Closed, the sheet sits fully off
   screen so it can't catch touches meant for home.
-- Swiping down on home pulls down the notification shade, once the finger has travelled 24dp. A swipe
-  that has moved the drawer at all never opens the shade.
+- Swiping down on home pulls down the notification shade as soon as the swipe is known to be
+  downward (past the touch slop). Android lets only the system drag the shade with the finger, so
+  starting it early is as close as a launcher can get. A swipe that has moved the drawer at all never
+  opens the shade.
+- Tapping the home clock opens the clock app; tapping the date opens the calendar on today. Both grow
+  out of the text, like apps from their icons.
 - Springs can overshoot. Clamp where an overshoot would show something it shouldn't (the sheet stops
   at the top so wallpaper never peeks under the search bar).
 - Apps open with a clip reveal from their icon.
 - Menus fade and scale in over 160ms from where the arrow points.
 - Settings pages crossfade.
+- Rows that move between sections (Hidden apps) glide there with `animateItem` while the rows on
+  screen stay put, so it's clear where the row went.
 - Reordering a list: other rows glide to their places with `animateItem`. The dragged row follows
   the finger exactly, grows 3% and gains a shadow.
 

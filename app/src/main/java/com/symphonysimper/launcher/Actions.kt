@@ -14,6 +14,8 @@ import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.app.StatusBarManager
+import android.provider.AlarmClock
+import android.provider.CalendarContract
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.widget.Toast
@@ -60,6 +62,30 @@ fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
         toast("Can't open ${app.label}")
     }
 }
+
+/** Opens [intent], or [fallback] when nothing handles it, growing it out of [bounds] within [view]. */
+fun Context.open(intent: Intent, fallback: Intent? = null, view: View? = null, bounds: Rect? = null) {
+    val options = if (view != null && bounds != null) {
+        ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height()).toBundle()
+    } else null
+    for (candidate in listOfNotNull(intent, fallback)) {
+        try {
+            startActivity(candidate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
+            return
+        } catch (_: ActivityNotFoundException) {
+        } catch (_: SecurityException) {
+        }
+    }
+    toast("No app can open this")
+}
+
+/** The clock app's alarms. */
+fun clockIntent() = Intent(AlarmClock.ACTION_SHOW_ALARMS)
+
+/** The calendar app on today, or just the calendar app if it doesn't take a date. */
+fun calendarIntents(now: Long) =
+    Intent(Intent.ACTION_VIEW, CalendarContract.CONTENT_URI.buildUpon().appendPath("time").appendPath(now.toString()).build()) to
+        Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR)
 
 fun Context.appInfo(app: App) =
     getSystemService(LauncherApps::class.java).startAppDetailsActivity(app.component, app.user, null, null)

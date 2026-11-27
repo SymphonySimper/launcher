@@ -6,6 +6,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.text.format.DateFormat
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.symphonysimper.launcher.calendarIntents
+import com.symphonysimper.launcher.clockIntent
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
@@ -25,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,7 +38,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,9 +49,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** How far a swipe down on home travels before it pulls down the notification shade. */
-private val ShadeSwipe = 24.dp
-
 @Composable
 fun Home(
     dock: List<App>,
@@ -60,9 +59,8 @@ fun Home(
 ) {
     var menuAt by remember { mutableStateOf<Offset?>(null) }
     val context = LocalContext.current
-    val shadeDistance = with(LocalDensity.current) { ShadeSwipe.toPx() }
-    // Downward travel in the current swipe, or -1 once it has opened the shade or moved the drawer.
-    var pulledDown by remember { mutableFloatStateOf(0f) }
+    // Whether the current swipe can still pull down the shade: not once it has done so or moved the drawer.
+    var canPullShade by remember { mutableStateOf(false) }
     Box(
         modifier
             .fillMaxSize()
@@ -72,22 +70,21 @@ fun Home(
                 rememberDraggableState { dy ->
                     drawer.drag(dy)
                     // A swipe that has moved the drawer at all is about the drawer, not the shade.
-                    if (drawer.progress > 0f) pulledDown = -1f
-                    if (pulledDown >= 0f) {
-                        pulledDown = (pulledDown + dy).coerceAtLeast(0f)
-                        if (pulledDown > shadeDistance) {
-                            pulledDown = -1f
-                            context.expandNotifications()
-                        }
+                    if (drawer.progress > 0f) canPullShade = false
+                    // Android only lets the system drag the shade with a finger, so the next best thing is
+                    // to start it the moment the swipe is known to be downward (past the touch slop).
+                    if (canPullShade && dy > 0f) {
+                        canPullShade = false
+                        context.expandNotifications()
                     }
                 },
                 Orientation.Vertical,
-                onDragStarted = { pulledDown = 0f },
+                onDragStarted = { canPullShade = drawer.progress <= 0f },
                 onDragStopped = { drawer.release(it) },
             ),
     ) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            Clock(Modifier.padding(start = 26.dp, top = 36.dp))
+            Clock(Modifier.padding(start = 26.dp - ClockTapPadding, top = 36.dp))
             Spacer(Modifier.weight(1f))
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 14.dp),
@@ -120,7 +117,11 @@ fun Home(
     }
 }
 
-/** Big time with the date below. Updates once a minute from the system tick. */
+/** Room around the clock and date inside their tap highlight. */
+private val ClockTapPadding = 8.dp
+
+/** Big time with the date below. Updates once a minute from the system tick. Tapping the time opens the
+ *  clock app, tapping the date opens the calendar. */
 @Composable
 private fun Clock(modifier: Modifier) {
     val context = LocalContext.current
@@ -147,6 +148,8 @@ private fun Clock(modifier: Modifier) {
     val time = remember(locale, is24) { SimpleDateFormat(if (is24) "HH:mm" else "h:mm", locale) }
     val date = remember(locale) { SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale) }
     val color = MaterialTheme.colorScheme.onSurface
+    val clockSource = rememberLaunchSource()
+    val calendarSource = rememberLaunchSource()
     Column(modifier) {
         Text(
             time.format(now),
@@ -155,12 +158,28 @@ private fun Clock(modifier: Modifier) {
             fontSize = 84.sp,
             lineHeight = 88.sp,
             letterSpacing = (-3).sp,
+            modifier = Modifier
+                .then(clockSource.modifier)
+                .clip(ClockTapShape)
+                .clickable { clockSource.open(clockIntent()) }
+                .padding(horizontal = ClockTapPadding),
         )
         Text(
             date.format(now),
             color = color.copy(alpha = 0.8f),
             fontSize = 19.sp,
-            modifier = Modifier.padding(start = 3.dp, top = 4.dp),
+            modifier = Modifier
+                .padding(start = 3.dp)
+                .then(calendarSource.modifier)
+                .clip(ClockTapShape)
+                .clickable {
+                    val (today, app) = calendarIntents(System.currentTimeMillis())
+                    calendarSource.open(today, app)
+                }
+                // Compose widens the touch area of small targets to 48dp, so this only sizes the highlight.
+                .padding(horizontal = ClockTapPadding, vertical = 4.dp),
         )
     }
 }
+
+private val ClockTapShape = RoundedCornerShape(16.dp)
