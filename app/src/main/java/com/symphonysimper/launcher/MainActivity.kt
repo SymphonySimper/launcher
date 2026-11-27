@@ -8,11 +8,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.focus.FocusRequester
@@ -46,6 +43,7 @@ import com.symphonysimper.launcher.ui.Home
 import com.symphonysimper.launcher.ui.SearchField
 import com.symphonysimper.launcher.ui.rankApps
 import com.symphonysimper.launcher.ui.rememberContacts
+import com.symphonysimper.launcher.ui.rememberDrawerState
 import com.symphonysimper.launcher.ui.searchBarBottom
 import com.symphonysimper.launcher.ui.theme.LauncherTheme
 
@@ -95,18 +93,23 @@ private fun LauncherRoot(resetSignal: Int) {
     val focusManager = LocalFocusManager.current
     val prefs = LauncherApp.instance.prefs
     val repo = LauncherApp.instance.apps
-    var drawerOpen by remember { mutableStateOf(false) }
+    val drawer = rememberDrawerState()
     var query by remember { mutableStateOf("") }
     val searchFocus = remember { FocusRequester() }
     var focusOnOpen by remember { mutableStateOf(false) }
 
-    fun close() {
-        focusManager.clearFocus()
-        drawerOpen = false
-        query = ""
+    LaunchedEffect(resetSignal) { drawer.snapTo(false) }
+    BackHandler(drawer.open) { drawer.animateTo(false) }
+    // However the drawer opens or closes (tap, swipe, back, reset), focus and the query follow it.
+    LaunchedEffect(drawer.open) {
+        if (drawer.open) {
+            if (focusOnOpen) searchFocus.requestFocus()
+        } else {
+            focusManager.clearFocus()
+            query = ""
+        }
+        focusOnOpen = false
     }
-    LaunchedEffect(resetSignal) { close() }
-    BackHandler(drawerOpen) { close() }
 
     val visible = remember(repo.all, prefs.hidden) { repo.all.filter { it.key !in prefs.hidden } }
     val dock = remember(repo.all, prefs.dock) { prefs.dock.mapNotNull(repo::find) }
@@ -122,26 +125,25 @@ private fun LauncherRoot(resetSignal: Int) {
         }
     }
 
-    LaunchedEffect(drawerOpen) {
-        if (drawerOpen && focusOnOpen) searchFocus.requestFocus()
-        focusOnOpen = false
-    }
-
-    val spatial = MaterialTheme.motionScheme
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().onSizeChanged { drawer.range = it.height / 4f }) {
         Home(
             dock = dock,
-            onOpenDrawer = { drawerOpen = true },
+            drawer = drawer,
             onLauncherSettings = { context.start(Intent(context, SettingsActivity::class.java)) },
             onSystemSettings = { context.openSystemSettings() },
+            modifier = Modifier.graphicsLayer { alpha = 1f - drawer.progress.coerceIn(0f, 1f) },
         )
-        // Only the drawer moves; the search bar below stays put on top of both.
-        AnimatedVisibility(
-            visible = drawerOpen,
-            enter = slideInVertically(spatial.fastSpatialSpec()) { it / 4 } + fadeIn(spatial.fastEffectsSpec()),
-            exit = slideOutVertically(spatial.fastSpatialSpec()) { it / 4 } + fadeOut(spatial.fastEffectsSpec()),
+        // The drawer stays composed so opening it is just a redraw; progress is read only while
+        // drawing, so following the finger never recomposes. The search bar below stays put on top.
+        Box(
+            Modifier.fillMaxSize().graphicsLayer {
+                val p = drawer.progress
+                alpha = p.coerceIn(0f, 1f)
+                // Closed, it also moves off screen, so it can't catch touches meant for home.
+                translationY = if (p <= 0f) size.height else (1f - p) * drawer.range
+            },
         ) {
-            Drawer(apps = visible, query = query, appResults = appResults, contacts = contacts, onClose = ::close)
+            Drawer(apps = visible, query = query, appResults = appResults, contacts = contacts, drawer = drawer)
         }
         SearchField(
             value = query,
@@ -156,13 +158,13 @@ private fun LauncherRoot(resetSignal: Int) {
                 .fillMaxWidth()
                 // On home the bar is a button: a tap opens the drawer and then focuses it. It can't take
                 // focus while the drawer is closed, so Android restoring focus can't reopen the drawer.
-                .focusProperties { canFocus = drawerOpen }
+                .focusProperties { canFocus = drawer.open }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(pass = PointerEventPass.Initial)
-                        if (!drawerOpen) {
+                        if (!drawer.open) {
                             focusOnOpen = true
-                            drawerOpen = true
+                            drawer.animateTo(true)
                         }
                     }
                 },

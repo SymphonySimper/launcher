@@ -6,8 +6,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.text.format.DateFormat
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +30,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.launch
+import com.symphonysimper.launcher.ui.theme.Sizes
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -48,31 +48,23 @@ import kotlin.math.roundToInt
 @Composable
 fun Home(
     dock: List<App>,
-    onOpenDrawer: () -> Unit,
+    drawer: DrawerState,
     onLauncherSettings: () -> Unit,
     onSystemSettings: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var menuAt by remember { mutableStateOf<Offset?>(null) }
     Box(
-        Modifier
+        modifier
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures(onLongPress = { menuAt = it }) }
-            .pointerInput(Unit) {
-                var travelled = 0f
-                var opened = false
-                val threshold = 48.dp.toPx()
-                detectVerticalDragGestures(
-                    onDragStart = { travelled = 0f; opened = false },
-                    onVerticalDrag = { _, dy ->
-                        travelled += dy
-                        if (!opened && travelled < -threshold) {
-                            opened = true
-                            onOpenDrawer()
-                        }
-                    },
-                )
-            },
+            // Swiping up pulls the drawer open with the finger.
+            .draggable(
+                rememberDraggableState { drawer.drag(it) },
+                Orientation.Vertical,
+                onDragStopped = { drawer.release(it) },
+            ),
     ) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             Clock(Modifier.padding(start = 26.dp, top = 36.dp))
@@ -83,7 +75,7 @@ fun Home(
             ) {
                 dock.forEach { app ->
                     AppIcon(
-                        app, 56.dp,
+                        app, Sizes.AppIcon,
                         Modifier.clip(SquircleShape).combinedClickable(onClick = { context.launch(app) }),
                     )
                 }

@@ -18,6 +18,9 @@ object Sizes {
 
     val Icon = 24.dp
 
+    /** App icons on home and in the drawer; icons are rendered at this size. */
+    val AppIcon = 56.dp
+
     /** Extra space under controls floating at the bottom, keeping them in easy thumb reach above the gesture bar. */
     val ThumbLift = 40.dp
 }

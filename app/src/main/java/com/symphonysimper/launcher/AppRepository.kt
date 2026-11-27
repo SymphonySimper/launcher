@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.createBitmap
+import com.symphonysimper.launcher.ui.theme.Sizes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -80,7 +81,7 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
 
     private fun load(): List<App> {
         val density = context.resources.displayMetrics.densityDpi
-        val sizePx = (ICON_DP * context.resources.displayMetrics.density).toInt()
+        val sizePx = (Sizes.AppIcon.value * context.resources.displayMetrics.density).toInt()
         val collator = Collator.getInstance()
         return launcherApps.getActivityList(null, Process.myUserHandle())
             .map { info ->
@@ -127,11 +128,6 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
         override fun onPackageChanged(packageName: String, user: UserHandle) = changed(packageName)
         override fun onPackagesAvailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) = reload()
         override fun onPackagesUnavailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) = reload()
-    }
-
-    companion object {
-        /** Largest size an icon is shown at (the dock). */
-        const val ICON_DP = 56
     }
 }
 

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -40,22 +41,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.symphonysimper.launcher.App
@@ -73,6 +69,7 @@ import com.symphonysimper.launcher.webSearch
 import com.symphonysimper.launcher.whatsApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.withContext
 import com.symphonysimper.launcher.ui.theme.Sizes
 
@@ -80,11 +77,11 @@ private const val COLUMNS = 4
 
 /** App drawer. When there's a query it shows search results instead of the grid. The search bar itself lives in LauncherRoot. */
 @Composable
-fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List<Contact>, onClose: () -> Unit) {
+fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List<Contact>, drawer: DrawerState) {
     Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                if (query.isBlank()) AppGrid(apps, onClose)
+                if (query.isBlank()) AppGrid(apps, drawer)
                 else Results(query, appResults, contacts)
             }
             Spacer(Modifier.height(searchBarSpace()))
@@ -110,35 +107,16 @@ fun rememberContacts(query: String): List<Contact> {
 }
 
 @Composable
-private fun AppGrid(apps: List<App>, onClose: () -> Unit) {
-    val close by rememberUpdatedState(onClose)
-    val threshold = with(LocalDensity.current) { 96.dp.toPx() }
-    // Pulling down while already at the top closes the drawer.
-    val pullToClose = remember {
-        object : NestedScrollConnection {
-            var pulled = 0f
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (source == NestedScrollSource.UserInput && available.y > 0f) {
-                    pulled += available.y
-                    if (pulled > threshold) {
-                        pulled = 0f
-                        close()
-                    }
-                } else if (consumed.y != 0f) {
-                    pulled = 0f
-                }
-                return Offset.Zero
-            }
-
-            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                pulled = 0f
-                return Velocity.Zero
-            }
-        }
+private fun AppGrid(apps: List<App>, drawer: DrawerState) {
+    val grid = rememberLazyGridState()
+    // Each time the drawer finishes closing, the grid goes back to the top for next time.
+    LaunchedEffect(drawer) {
+        snapshotFlow { drawer.progress <= 0f }.filter { it }.collect { grid.scrollToItem(0) }
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(COLUMNS),
-        modifier = Modifier.fillMaxSize().nestedScroll(pullToClose),
+        state = grid,
+        modifier = Modifier.fillMaxSize().nestedScroll(drawer.pullToClose),
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -280,7 +258,7 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppIcon(app, 56.dp)
+            AppIcon(app, Sizes.AppIcon)
             Spacer(Modifier.height(8.dp))
             Text(
                 app.label,
