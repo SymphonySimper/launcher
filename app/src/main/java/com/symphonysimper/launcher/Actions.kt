@@ -100,6 +100,17 @@ fun Context.whatsApp(contact: Contact) {
 
 fun Context.openSystemSettings() = start(Intent(Settings.ACTION_SETTINGS))
 
+/**
+ * Pulls down the notification shade. There's no public API for this, so it calls the hidden
+ * StatusBarManager.expandNotificationsPanel(), the way other launchers do; it needs EXPAND_STATUS_BAR.
+ */
+fun Context.expandNotifications() {
+    runCatching {
+        val manager = getSystemService(StatusBarManager::class.java)
+        StatusBarManager::class.java.getMethod("expandNotificationsPanel").invoke(manager)
+    }
+}
+
 fun Context.requestAddTile() {
     getSystemService(StatusBarManager::class.java)?.requestAddTileService(
         ComponentName(this, StayAwakeTile::class.java),

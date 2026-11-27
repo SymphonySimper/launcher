@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,14 +36,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.symphonysimper.launcher.App
+import com.symphonysimper.launcher.expandNotifications
 import com.symphonysimper.launcher.ui.theme.Sizes
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.roundToInt
+
+/** How far a swipe down on home travels before it pulls down the notification shade. */
+private val ShadeSwipe = 24.dp
 
 @Composable
 fun Home(
@@ -53,14 +59,30 @@ fun Home(
     modifier: Modifier = Modifier,
 ) {
     var menuAt by remember { mutableStateOf<Offset?>(null) }
+    val context = LocalContext.current
+    val shadeDistance = with(LocalDensity.current) { ShadeSwipe.toPx() }
+    // Downward travel in the current swipe, or -1 once it has opened the shade or moved the drawer.
+    var pulledDown by remember { mutableFloatStateOf(0f) }
     Box(
         modifier
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures(onLongPress = { menuAt = it }) }
-            // Swiping up pulls the drawer open with the finger.
+            // Swiping up pulls the drawer open with the finger; swiping down pulls down the notification shade.
             .draggable(
-                rememberDraggableState { drawer.drag(it) },
+                rememberDraggableState { dy ->
+                    drawer.drag(dy)
+                    // A swipe that has moved the drawer at all is about the drawer, not the shade.
+                    if (drawer.progress > 0f) pulledDown = -1f
+                    if (pulledDown >= 0f) {
+                        pulledDown = (pulledDown + dy).coerceAtLeast(0f)
+                        if (pulledDown > shadeDistance) {
+                            pulledDown = -1f
+                            context.expandNotifications()
+                        }
+                    }
+                },
                 Orientation.Vertical,
+                onDragStarted = { pulledDown = 0f },
                 onDragStopped = { drawer.release(it) },
             ),
     ) {

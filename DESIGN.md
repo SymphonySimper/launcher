@@ -191,6 +191,8 @@ only for failures in `Actions.kt`, which runs outside Compose.
 - The drawer's progress is read only inside `graphicsLayer` and draw lambdas, so following the finger
   never recomposes. Do the same for anything animated every frame. Closed, the sheet sits fully off
   screen so it can't catch touches meant for home.
+- Swiping down on home pulls down the notification shade, once the finger has travelled 24dp. A swipe
+  that has moved the drawer at all never opens the shade.
 - Springs can overshoot. Clamp where an overshoot would show something it shouldn't (the sheet stops
   at the top so wallpaper never peeks under the search bar).
 - Apps open with a clip reveal from their icon.
