@@ -8,9 +8,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import androidx.compose.runtime.getValue
@@ -152,21 +155,30 @@ object Pebbles {
     private const val W = 360f
     private const val H = 800f
 
-    private class Palette(val background: Long, val soft: Long, val main: Long, val line: Long)
+    /**
+     * Like the Phone and Messages icons: shapes fade from lavender ([top]) to bright blue ([bottom]),
+     * with a deeper blue copy ([back]) peeking out behind them at the top left.
+     */
+    private class Palette(val background: Long, val soft: Long, val softTop: Long, val top: Long, val bottom: Long, val back: Long)
 
-    // Blue pebbles on white, or on black in dark mode.
-    private val LIGHT = Palette(background = 0xFFFFFFFF, soft = 0xFFDCE5FB, main = 0xFF5B8DEF, line = 0xFF0F2A6E)
-    private val DARK = Palette(background = 0xFF000000, soft = 0xFF12203F, main = 0xFF3A66D6, line = 0xFFB9CCFF)
+    private val LIGHT = Palette(
+        background = 0xFFFFFFFF, soft = 0xFFDCE5FB, softTop = 0xFFECEAFF,
+        top = 0xFFA6A7FF, bottom = 0xFF3186FF, back = 0xFF336EF3,
+    )
+    private val DARK = Palette(
+        background = 0xFF000000, soft = 0xFF12203F, softTop = 0xFF1F1D47,
+        top = 0xFF8B8CF0, bottom = 0xFF2D78F0, back = 0xFF2457D2,
+    )
 
     private fun palette(dark: Boolean) = if (dark) DARK else LIGHT
 
-    /** The palette as wallpaper colours, so Material You themes the phone in the same blue. */
+    /** The palette as wallpaper colours, so Material You themes the phone in the same blues. */
     fun colors(dark: Boolean): WallpaperColors {
         val p = palette(dark)
         return WallpaperColors(
-            Color.valueOf(p.main.toInt()),
+            Color.valueOf(p.bottom.toInt()),
+            Color.valueOf(p.top.toInt()),
             Color.valueOf(p.soft.toInt()),
-            Color.valueOf(p.line.toInt()),
             if (dark) WallpaperColors.HINT_SUPPORTS_DARK_THEME else WallpaperColors.HINT_SUPPORTS_DARK_TEXT,
         )
     }
@@ -179,30 +191,46 @@ object Pebbles {
         canvas.translate((width - W * scale) / 2f, (height - H * scale) / 2f)
         canvas.scale(scale, scale)
 
-        val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-        val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 2.2f
-            color = p.line.toInt()
-        }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         // Kept clear of the clock text, the dock and the search bar.
-        fill.color = p.soft.toInt()
-        canvas.drawCircle(60f, 170f, 92f, fill)
+        paint.shader = fade(78f, 262f, p.softTop, p.soft)
+        canvas.drawCircle(60f, 170f, 92f, paint)
 
-        fill.color = p.main.toInt()
-        canvas.withRotation(-35f, 285f, 330f) { drawRoundRect(RectF(150f, 278f, 420f, 382f), 52f, 52f, fill) }
-        canvas.withRotation(16f, 105f, 470f) { drawRoundRect(RectF(30f, 395f, 180f, 545f), 50f, 50f, fill) }
+        pebble(canvas, paint, p, roundRect(RectF(150f, 278f, 420f, 382f), 52f, -35f, 285f, 330f))
+        pebble(canvas, paint, p, roundRect(RectF(30f, 395f, 180f, 545f), 50f, 16f, 105f, 470f))
 
-        canvas.drawCircle(296f, 500f, 36f, stroke)
-        fill.color = p.line.toInt()
-        canvas.drawCircle(214f, 420f, 9f, fill)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 3f
+        paint.shader = fade(464f, 536f, p.top, p.bottom)
+        canvas.drawCircle(296f, 500f, 36f, paint)
+        paint.style = Paint.Style.FILL
+        paint.shader = null
+        paint.color = p.top.toInt() // lavender, so the dot still shows against the blue pebble
+        canvas.drawCircle(214f, 420f, 9f, paint)
         canvas.restore()
     }
 
-    private inline fun Canvas.withRotation(degrees: Float, px: Float, py: Float, block: Canvas.() -> Unit) {
-        save()
-        rotate(degrees, px, py)
-        block()
-        restore()
+    /** Draws [shape] twice: a deeper blue copy nudged up and left, then the faded shape over it. */
+    private fun pebble(canvas: Canvas, paint: Paint, p: Palette, shape: Path) {
+        paint.shader = null
+        paint.color = p.back.toInt()
+        canvas.save()
+        canvas.translate(-7f, -6f)
+        canvas.drawPath(shape, paint)
+        canvas.restore()
+        // The fade runs straight down the screen however the shape is turned, as on the icons, and
+        // reaches full blue a little past halfway.
+        val bounds = RectF().also { shape.computeBounds(it, true) }
+        paint.shader = fade(bounds.top, bounds.top + bounds.height() * 0.65f, p.top, p.bottom)
+        canvas.drawPath(shape, paint)
     }
+
+    /** A rounded rectangle turned [degrees] about ([px], [py]). */
+    private fun roundRect(rect: RectF, radius: Float, degrees: Float, px: Float, py: Float) = Path().apply {
+        addRoundRect(rect, radius, radius, Path.Direction.CW)
+        transform(Matrix().apply { setRotate(degrees, px, py) })
+    }
+
+    private fun fade(top: Float, bottom: Float, from: Long, to: Long) =
+        LinearGradient(0f, top, 0f, bottom, from.toInt(), to.toInt(), Shader.TileMode.CLAMP)
 }
