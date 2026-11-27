@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,7 +38,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,16 +112,8 @@ fun Home(
         menuAt?.let { at ->
             Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
                 ExpressiveMenu(expanded = true, onDismissRequest = { menuAt = null }) {
-                    DropdownMenuItem(
-                        text = { Text("Launcher settings") },
-                        leadingIcon = { Icon(Ic.tune, null) },
-                        onClick = { menuAt = null; onLauncherSettings() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("System settings") },
-                        leadingIcon = { Icon(Ic.settings, null) },
-                        onClick = { menuAt = null; onSystemSettings() },
-                    )
+                    MenuItem(Ic.tune, "Launcher settings") { menuAt = null; onLauncherSettings() }
+                    MenuItem(Ic.settings, "System settings") { menuAt = null; onSystemSettings() }
                 }
             }
         }
@@ -156,13 +146,19 @@ private fun Clock(modifier: Modifier) {
     val date = remember(locale) { SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale) }
     val color = MaterialTheme.colorScheme.onSurface
     Column(modifier) {
-        Text(time.format(now), color = color, fontSize = 80.sp, lineHeight = 84.sp, letterSpacing = (-2).sp)
+        Text(
+            time.format(now),
+            color = color,
+            style = MaterialTheme.typography.displayLarge,
+            fontSize = 84.sp,
+            lineHeight = 88.sp,
+            letterSpacing = (-3).sp,
+        )
         Text(
             date.format(now),
-            color = color,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = 3.dp),
+            color = color.copy(alpha = 0.8f),
+            fontSize = 19.sp,
+            modifier = Modifier.padding(start = 3.dp, top = 4.dp),
         )
     }
 }

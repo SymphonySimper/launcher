@@ -1,6 +1,13 @@
 package com.symphonysimper.launcher.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -88,7 +95,7 @@ fun SearchField(
                     field()
                 }
                 if (value.isNotEmpty()) {
-                    IconButton(onClick = { onValueChange("") }) { Icon(Ic.close, "Clear") }
+                    IconButton(onClick = { onValueChange("") }, shapes = IconButtonDefaults.shapes()) { Icon(Ic.close, "Clear") }
                 } else {
                     Spacer(Modifier.width(14.dp))
                 }
@@ -97,10 +104,32 @@ fun SearchField(
     )
 }
 
-/** Material 3 Expressive menu: one rounded group in a popup. */
+/** Material 3 Expressive menu: one rounded group in a popup, as in the mockup. */
 @Composable
 fun ExpressiveMenu(expanded: Boolean, onDismissRequest: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismissRequest) {
-        DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1), content = content)
+        DropdownMenuGroup(
+            shapes = MenuDefaults.groupShape(0, 1),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentPadding = PaddingValues(6.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+fun MenuItem(icon: ImageVector, text: String, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .widthIn(min = 176.dp)
+            .height(50.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
     }
 }

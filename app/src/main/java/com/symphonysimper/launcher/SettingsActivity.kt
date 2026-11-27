@@ -10,6 +10,28 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.navigationBars
+import kotlinx.coroutines.launch
+import com.symphonysimper.launcher.ui.theme.pageBackground
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -23,6 +45,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +64,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -61,10 +83,7 @@ import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -123,19 +142,38 @@ class SettingsActivity : ComponentActivity() {
 
 private enum class Page(val parent: Page?) { Main(null), Dock(Main), AddApp(Dock), Hidden(Main), Engine(Main), Wallpaper(Main) }
 
+/** Shows a message in a snackbar, so feedback uses the app's style rather than a system toast. */
+private val LocalNotify = staticCompositionLocalOf<(String) -> Unit> { {} }
+
 @Composable
 private fun SettingsRoot(resumes: Int) {
     var page by rememberSaveable { mutableStateOf(Page.Main) }
     val back = { page = page.parent ?: page }
     BackHandler(page != Page.Main, back)
-    AnimatedContent(page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "page") {
-        when (it) {
-            Page.Main -> MainPage(resumes) { page = it }
-            Page.Dock -> DockPage(back) { page = Page.AddApp }
-            Page.AddApp -> AddAppPage(back)
-            Page.Hidden -> HiddenPage(back)
-            Page.Engine -> EnginePage(back)
-            Page.Wallpaper -> WallpaperPage(back)
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val notify: (String) -> Unit = { message ->
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(message)
+        }
+    }
+    CompositionLocalProvider(LocalNotify provides notify) {
+        Box(Modifier.fillMaxSize()) {
+            AnimatedContent(page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "page") {
+                when (it) {
+                    Page.Main -> MainPage(resumes) { page = it }
+                    Page.Dock -> DockPage(back) { page = Page.AddApp }
+                    Page.AddApp -> AddAppPage(back)
+                    Page.Hidden -> HiddenPage(back)
+                    Page.Engine -> EnginePage(back)
+                    Page.Wallpaper -> WallpaperPage(back)
+                }
+            }
+            SnackbarHost(
+                snackbar,
+                Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+            )
         }
     }
 }
@@ -149,28 +187,33 @@ private fun PageScaffold(
     bottom: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val background = MaterialTheme.colorScheme.pageBackground
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime)),
+            .background(background)
+            .nestedScroll(scroll.nestedScrollConnection)
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
     ) {
-        if (onBack != null) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(start = 6.dp, top = 6.dp)) { Icon(Ic.back, "Back") }
-        } else {
-            Spacer(Modifier.height(54.dp))
-        }
-        Text(
-            title,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = (-0.5).sp,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 16.dp),
+        LargeFlexibleTopAppBar(
+            title = { Text(title) },
+            navigationIcon = {
+                if (onBack != null) {
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(Ic.back, "Back") }
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = background, scrolledContainerColor = background),
+            scrollBehavior = scroll,
         )
         Column(Modifier.weight(1f), content = content)
         bottom?.invoke()
     }
 }
+
+/** List row title: one line. */
+@Composable
+private fun Title(text: String) = Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
 private val itemColors @Composable get() = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright)
 
@@ -208,7 +251,7 @@ private fun NavRow(i: Int, n: Int, icon: ImageVector, title: String, summary: St
         leadingContent = { Lead(icon) },
         supportingContent = summary?.let { { Text(it, maxLines = 1) } },
         trailingContent = { Icon(Ic.chevron, null) },
-    ) { Text(title) }
+    ) { Title(title) }
 }
 
 @Composable
@@ -227,7 +270,7 @@ private fun SwitchRow(
         colors = itemColors,
         leadingContent = leading,
         trailingContent = { MonoSwitch(checked) },
-    ) { Text(title) }
+    ) { Title(title) }
 }
 
 @Composable
@@ -246,6 +289,7 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
     val repo = LauncherApp.instance.apps
+    val notify = LocalNotify.current
 
     @Suppress("UNUSED_EXPRESSION") resumes // re-read the checks below after returning from system screens
     val isDefault = context.getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_HOME)
@@ -259,14 +303,14 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         runCatching { context.contentResolver.openOutputStream(uri)!!.use { it.write(prefs.toJson().toByteArray()) } }
-            .onSuccess { context.toast("Settings saved") }
-            .onFailure { context.toast("Couldn't save the file") }
+            .onSuccess { notify("Settings saved") }
+            .onFailure { notify("Couldn't save the file") }
     }
     val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         runCatching { prefs.fromJson(context.contentResolver.openInputStream(uri)!!.use { it.reader().readText() }) }
-            .onSuccess { context.toast("Settings restored") }
-            .onFailure { context.toast("That isn't a launcher backup") }
+            .onSuccess { notify("Settings restored") }
+            .onFailure { notify("That isn't a launcher backup") }
     }
 
     PageScaffold("Launcher", onBack = null) {
@@ -368,17 +412,20 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                         },
                     leadingContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { prefs.dock = prefs.dock - key }) { Icon(Ic.remove, "Remove") }
+                            IconButton(onClick = { prefs.dock = prefs.dock - key }, shapes = IconButtonDefaults.shapes()) {
+                                Icon(Ic.remove, "Remove")
+                            }
                             AppIcon(app, 40.dp)
                         }
                     },
                     trailingContent = { Icon(Ic.drag, "Hold to reorder") },
-                ) { Text(app.label) }
+                ) { Title(app.label) }
             }
         }
         if (order.size < MAX_DOCK) {
             FilledTonalButton(
                 onClick = onAdd,
+                shapes = ButtonDefaults.shapes(),
                 modifier = Modifier.fillMaxWidth().padding(12.dp).height(56.dp),
             ) {
                 Icon(Ic.add, null)
@@ -439,7 +486,7 @@ private fun HiddenPage(onBack: () -> Unit) {
                 colors = itemColors,
                 leadingContent = { AppIcon(app, 40.dp) },
                 trailingContent = { MonoSwitch(isHidden) },
-            ) { Text(app.label) }
+            ) { Title(app.label) }
         }
         section(hidden)
         if (hidden.isNotEmpty() && shown.isNotEmpty()) {
@@ -463,7 +510,7 @@ private fun AppRow(app: App, shapes: ListItemShapes, onClick: () -> Unit) {
         shapes = shapes,
         colors = itemColors,
         leadingContent = { AppIcon(app, 40.dp) },
-    ) { Text(app.label) }
+    ) { Title(app.label) }
 }
 
 @Composable
@@ -493,7 +540,7 @@ private fun EnginePage(onBack: () -> Unit) {
                             )
                         }
                     } else null,
-                ) { Text(name) }
+                ) { Title(name) }
             }
         }
     }
@@ -503,6 +550,7 @@ private fun EnginePage(onBack: () -> Unit) {
 private fun WallpaperPage(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
+    val notify = LocalNotify.current
     var pickingDark by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -512,7 +560,7 @@ private fun WallpaperPage(onBack: () -> Unit) {
             }
         }.onSuccess {
             prefs.wallpaperVersion++
-        }.onFailure { context.toast("Couldn't use that image") }
+        }.onFailure { notify("Couldn't use that image") }
     }
     fun pick(dark: Boolean) {
         pickingDark = dark
@@ -520,17 +568,16 @@ private fun WallpaperPage(onBack: () -> Unit) {
     }
 
     PageScaffold("Wallpaper", onBack) {
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            SegmentedButton(
-                selected = !prefs.wallpaperImages,
-                onClick = { prefs.wallpaperImages = false },
-                shape = SegmentedButtonDefaults.itemShape(0, 2),
-            ) { Text("Generated") }
-            SegmentedButton(
-                selected = prefs.wallpaperImages,
-                onClick = { prefs.wallpaperImages = true },
-                shape = SegmentedButtonDefaults.itemShape(1, 2),
-            ) { Text("My images") }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        ) {
+            ModeButton("Generated", checked = !prefs.wallpaperImages, ButtonGroupDefaults.connectedLeadingButtonShapes()) {
+                prefs.wallpaperImages = false
+            }
+            ModeButton("My images", checked = prefs.wallpaperImages, ButtonGroupDefaults.connectedTrailingButtonShapes()) {
+                prefs.wallpaperImages = true
+            }
         }
         Row(
             Modifier.fillMaxWidth().height(320.dp).padding(16.dp),
@@ -554,6 +601,7 @@ private fun WallpaperPage(onBack: () -> Unit) {
         val active = WallpaperManager.getInstance(context).wallpaperInfo?.component == component
         if (!active) {
             Button(
+                shapes = ButtonDefaults.shapes(),
                 onClick = {
                     context.start(
                         Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
@@ -567,10 +615,52 @@ private fun WallpaperPage(onBack: () -> Unit) {
 }
 
 @Composable
-private fun RowScope.GeneratedPreview(dark: Boolean) {
-    Canvas(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(24.dp))) {
-        drawIntoCanvas { Pebbles.draw(it.nativeCanvas, size.width, size.height, dark) }
+private fun RowScope.ModeButton(text: String, checked: Boolean, shapes: ToggleButtonShapes, onClick: () -> Unit) {
+    ToggleButton(
+        checked = checked,
+        onCheckedChange = { onClick() },
+        shapes = shapes,
+        colors = ToggleButtonDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        modifier = Modifier.weight(1f).height(52.dp).semantics { role = Role.RadioButton },
+    ) {
+        if (checked) {
+            Icon(Ic.check, null, Modifier.size(ToggleButtonDefaults.IconSize))
+            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+        }
+        Text(text)
     }
+}
+
+@Composable
+private fun RowScope.GeneratedPreview(dark: Boolean) {
+    val shape = RoundedCornerShape(24.dp)
+    Box(
+        Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clip(shape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawIntoCanvas { Pebbles.draw(it.nativeCanvas, size.width, size.height, dark) }
+        }
+        SlotLabel(if (dark) "Dark" else "Light")
+    }
+}
+
+@Composable
+private fun SlotLabel(text: String) {
+    Text(
+        text,
+        color = Color.White,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier
+            .padding(12.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 @Composable
@@ -594,16 +684,7 @@ private fun RowScope.ImageSlot(label: String, dark: Boolean, version: Int, onCli
         if (image == null) {
             Icon(Ic.add, null, Modifier.align(Alignment.Center).size(32.dp))
         }
-        Text(
-            label,
-            color = MaterialTheme.colorScheme.inverseOnSurface,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier
-                .padding(12.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.8f))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        SlotLabel(label)
     }
 }
 

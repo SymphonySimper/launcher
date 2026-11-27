@@ -25,7 +25,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -122,7 +122,11 @@ fun Drawer(
                     val store = remember(LauncherApp.instance.apps.all) {
                         LauncherApp.instance.apps.all.firstOrNull { it.pkg == "com.android.vending" }
                     }
-                    FilledTonalIconButton(onClick = { context.playStoreSearch(query) }, modifier = Modifier.size(56.dp)) {
+                    FilledTonalIconButton(
+                        onClick = { context.playStoreSearch(query) },
+                        shapes = IconButtonDefaults.shapes(),
+                        modifier = Modifier.size(56.dp),
+                    ) {
                         if (store != null) Image(store.icon, "Search Play Store", Modifier.size(30.dp))
                         else Icon(Ic.play, "Search Play Store")
                     }
@@ -136,7 +140,11 @@ fun Drawer(
                     modifier = Modifier.weight(1f),
                 )
                 if (searching) {
-                    FilledIconButton(onClick = { context.webSearch(query) }, modifier = Modifier.size(56.dp)) {
+                    FilledIconButton(
+                        onClick = { context.webSearch(query) },
+                        shapes = IconButtonDefaults.shapes(),
+                        modifier = Modifier.size(56.dp),
+                    ) {
                         Icon(Ic.globe, "Search the web")
                     }
                 }
@@ -244,20 +252,12 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
             )
         }
         ExpressiveMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(
-                text = { Text("Hide") },
-                leadingIcon = { Icon(Ic.hide, null) },
-                onClick = {
-                    menu = false
-                    val prefs = LauncherApp.instance.prefs
-                    prefs.hidden = prefs.hidden + app.key
-                },
-            )
-            DropdownMenuItem(
-                text = { Text("App info") },
-                leadingIcon = { Icon(Ic.info, null) },
-                onClick = { menu = false; context.appInfo(app) },
-            )
+            MenuItem(Ic.hide, "Hide") {
+                menu = false
+                val prefs = LauncherApp.instance.prefs
+                prefs.hidden = prefs.hidden + app.key
+            }
+            MenuItem(Ic.info, "App info") { menu = false; context.appInfo(app) }
         }
     }
 }
@@ -292,12 +292,12 @@ private fun ContactRow(
             // Call stays in the same spot whether or not the WhatsApp button is there.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (contact.whatsAppDataId != null) {
-                    FilledTonalIconButton(onClick = onWhatsApp) { Icon(Ic.chat, "WhatsApp") }
+                    FilledTonalIconButton(onClick = onWhatsApp, shapes = IconButtonDefaults.shapes()) { Icon(Ic.chat, "WhatsApp") }
                 } else {
                     Spacer(Modifier.size(40.dp))
                 }
                 if (contact.phone != null) {
-                    FilledIconButton(onClick = onCall) { Icon(Ic.phone, "Call") }
+                    FilledIconButton(onClick = onCall, shapes = IconButtonDefaults.shapes()) { Icon(Ic.phone, "Call") }
                 }
             }
         },
