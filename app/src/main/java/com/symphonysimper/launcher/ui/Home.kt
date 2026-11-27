@@ -20,10 +20,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -51,7 +49,6 @@ import kotlin.math.roundToInt
 fun Home(
     dock: List<App>,
     onOpenDrawer: () -> Unit,
-    onSearch: () -> Unit,
     onLauncherSettings: () -> Unit,
     onSystemSettings: () -> Unit,
 ) {
@@ -91,22 +88,7 @@ fun Home(
                     )
                 }
             }
-            Spacer(Modifier.height(28.dp))
-            Surface(
-                onClick = onSearch,
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceBright,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 34.dp).height(52.dp),
-            ) {
-                Box(contentAlignment = Alignment.CenterStart) {
-                    Icon(
-                        Ic.search, "Search",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 18.dp).size(26.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(18.dp + searchBarSpace())) // the shared search bar sits here
         }
 
         menuAt?.let { at ->

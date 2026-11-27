@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,7 +82,18 @@ fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier) {
     }
 }
 
-/** Pill search field used in the drawer and in app lists. */
+@Composable
+fun keyboardOpen(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
+/** Gap under the launcher's search bar: room above the gesture bar, less when the keyboard is up. */
+@Composable
+fun searchBarBottom(): Dp = if (keyboardOpen()) 10.dp else 24.dp
+
+/** Height the launcher's bottom search bar takes up, so home and drawer content stay clear of it. */
+@Composable
+fun searchBarSpace(): Dp = 10.dp + 56.dp + searchBarBottom()
+
+/** Pill search field used in the launcher and in app lists. */
 @Composable
 fun SearchField(
     value: String,
@@ -90,6 +102,7 @@ fun SearchField(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester = FocusRequester(),
     onSearch: () -> Unit = {},
+    color: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
 ) {
     val colors = MaterialTheme.colorScheme
     BasicTextField(
@@ -106,7 +119,7 @@ fun SearchField(
                 Modifier
                     .height(56.dp)
                     .clip(CircleShape)
-                    .background(colors.surfaceContainerHighest)
+                    .background(color)
                     .padding(start = 18.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

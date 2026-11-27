@@ -45,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -78,58 +77,35 @@ import kotlinx.coroutines.withContext
 
 private const val COLUMNS = 4
 
-/** App drawer. When there's a query it shows search results instead of the grid. */
+/** App drawer. When there's a query it shows search results instead of the grid. The search bar itself lives in LauncherRoot. */
 @Composable
-fun Drawer(
-    apps: List<App>,
-    query: String,
-    onQueryChange: (String) -> Unit,
-    focusSearch: Boolean,
-    onClose: () -> Unit,
-) {
-    val context = LocalContext.current
-    val prefs = LauncherApp.instance.prefs
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(focusSearch) { if (focusSearch) focus.requestFocus() }
-
-    val appResults = remember(apps, query) { rankApps(apps, query) }
-    var contacts by remember { mutableStateOf(emptyList<Contact>()) }
-    LaunchedEffect(query, prefs.contacts) {
-        if (query.isBlank() || !prefs.contacts) {
-            contacts = emptyList()
-            return@LaunchedEffect
-        }
-        delay(60) // let fast typing settle before hitting the contacts provider
-        contacts = withContext(Dispatchers.IO) { context.searchContacts(query) }
-    }
-
-    fun onEnter() {
-        when {
-            query.isBlank() -> Unit
-            appResults.isNotEmpty() -> context.launch(appResults.first())
-            contacts.isNotEmpty() -> context.openContact(contacts.first())
-            else -> context.webSearch(query)
-        }
-    }
-
+fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List<Contact>, onClose: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 if (query.isBlank()) AppGrid(apps, onClose)
                 else Results(query, appResults, contacts)
             }
-            // Extra room above the gesture bar, not needed when the keyboard is up.
-            val keyboard = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-            SearchField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = "Search apps, contacts, web",
-                focusRequester = focus,
-                onSearch = ::onEnter,
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = if (keyboard) 10.dp else 24.dp),
-            )
+            Spacer(Modifier.height(searchBarSpace()))
         }
     }
+}
+
+/** Contacts matching [query], looked up off the main thread once typing settles. */
+@Composable
+fun rememberContacts(query: String): List<Contact> {
+    val context = LocalContext.current
+    val enabled = LauncherApp.instance.prefs.contacts
+    var contacts by remember { mutableStateOf(emptyList<Contact>()) }
+    LaunchedEffect(query, enabled) {
+        if (query.isBlank() || !enabled) {
+            contacts = emptyList()
+            return@LaunchedEffect
+        }
+        delay(60) // let fast typing settle before hitting the contacts provider
+        contacts = withContext(Dispatchers.IO) { context.searchContacts(query) }
+    }
+    return contacts
 }
 
 @Composable
