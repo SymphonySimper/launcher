@@ -29,12 +29,18 @@ have fixed jobs:
 | Role | Used for |
 |---|---|
 | `pageBackground` (extension in `Theme.kt`) | The page behind everything: drawer, settings pages. Tinted in light, near-black in dark. |
-| `surfaceBright` | Anything sitting on the page: list rows, search bar, menu cards, result segments, floating controls. |
-| `secondaryContainer` / `onSecondaryContainer` | Selected or highlighted: the result Enter will open, a checked toggle, the row being dragged, the circle behind a settings row icon. |
+| `surfaceBright` | Anything sitting on the page: list rows, the settings search bar, menu cards, result segments, floating controls. |
+| `secondaryContainer` / `onSecondaryContainer` | Selected or highlighted: the result Enter will open, a checked toggle, the row being dragged, the circle behind a settings row icon. Also the launcher's search bar (see below). |
 | `primary` / `onPrimary` | The single main action on a screen ("Set wallpaper") or a strong on/off state ("Same image for both"). Use sparingly. |
 | `primaryContainer` / `onPrimaryContainer` | Contact initial avatars. |
 | `onSurface` | Main text and icons. |
 | `onSurfaceVariant` | Secondary text and icons: section headers, unselected toggles, the search icon. |
+
+**Exception: the launcher's search bar** (home and drawer, `SearchField` in `MainActivity.kt`) is
+tonal: `secondaryContainer` with its icon, text and clear button in `onSecondaryContainer`. It sits
+straight on the wallpaper, and `surfaceBright` is almost the same white as Pebbles, so it vanished.
+Tonal follows Material You, so it also suits a photo wallpaper. Search bars on settings pages stay
+on the default colours.
 
 `ColorScheme.isDark` tells you which mode you're in. The only hard-coded colours in the app are the
 Pebbles wallpaper palette (see [Wallpaper](#wallpaper)).
@@ -193,11 +199,14 @@ only for failures in `Actions.kt`, which runs outside Compose.
 ## Wallpaper
 
 Pebbles (`PebblesWallpaper.kt`, `object Pebbles`) is drawn in a 360×800 space scaled to cover the
-screen. Its shapes take the look of the Phone and Messages icons: a vertical fade from lavender
-(`top`) to bright blue (`bottom`), with a deeper blue copy (`back`) offset up and left behind each
-pebble. The fade runs straight down the screen however a shape is rotated. Light and dark palettes
-are kept in step, and `colors()` hands the blues to Material You. Keep shapes clear of the clock,
-the dock and the search bar.
+screen. The layout is a cascade: three pebbles fall from the top right to the bottom left, growing
+as they go, between a soft circle behind the clock and another bleeding off behind the dock, with two
+thin rings as accents. No dots. The shapes take the look of the Phone and Messages icons: a vertical
+fade from lavender (`top`) to bright blue (`bottom`), with a deeper blue copy (`back`) offset up and
+left behind each pebble. The fade runs straight down the screen however a shape is rotated. Light
+and dark palettes are kept in step, and `colors()` hands the blues to Material You. Only the soft
+circles may sit behind the clock or the dock. Keep pebbles and rings clear of the clock text (check
+with the real font on the phone), the dock and the search bar.
 
 ## Checking UI work
 

@@ -160,7 +160,11 @@ private fun LauncherRoot(resetSignal: Int) {
             onValueChange = { query = it },
             onSearch = ::onEnter,
             focusRequester = searchFocus,
-            color = MaterialTheme.colorScheme.surfaceBright,
+            // Tonal rather than the bright surface, which is nearly the same white as Pebbles; it
+            // follows Material You, so it also picks up a photo wallpaper's colours.
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))

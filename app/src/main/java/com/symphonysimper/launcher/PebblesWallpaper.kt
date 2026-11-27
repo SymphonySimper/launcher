@@ -192,18 +192,30 @@ object Pebbles {
         canvas.scale(scale, scale)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        // Kept clear of the clock text, the dock and the search bar.
-        paint.shader = fade(78f, 262f, p.softTop, p.soft)
-        canvas.drawCircle(60f, 170f, 92f, paint)
+        // Pebbles fall from the top right to the bottom left, growing as they go, between a soft
+        // circle behind the clock and another bleeding off behind the dock.
+        soft(canvas, paint, 58f, 150f, 104f, p.softTop, p.soft)
+        soft(canvas, paint, 335f, 650f, 170f, p.soft, p.softTop)
 
-        pebble(canvas, paint, p, roundRect(RectF(150f, 278f, 420f, 382f), 52f, -35f, 285f, 330f))
-        pebble(canvas, paint, p, roundRect(RectF(30f, 395f, 180f, 545f), 50f, 16f, 105f, 470f))
+        pebble(canvas, paint, p, roundRect(RectF(276f, 112f, 342f, 178f), 24f, 18f)) // clear of the clock
+        pebble(canvas, paint, p, roundRect(RectF(170f, 248f, 360f, 352f), 52f, -30f))
+        pebble(canvas, paint, p, roundRect(RectF(-52f, 405f, 218f, 565f), 80f, 20f))
 
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 3f
-        paint.shader = fade(464f, 536f, p.top, p.bottom)
-        canvas.drawCircle(296f, 500f, 36f, paint)
+        ring(canvas, paint, p, 118f, 285f, 28f, 3f)
+        ring(canvas, paint, p, 300f, 455f, 20f, 2.5f)
         canvas.restore()
+    }
+
+    private fun soft(canvas: Canvas, paint: Paint, cx: Float, cy: Float, r: Float, from: Long, to: Long) {
+        paint.shader = fade(cy - r, cy + r, from, to)
+        canvas.drawCircle(cx, cy, r, paint)
+    }
+
+    private fun ring(canvas: Canvas, paint: Paint, p: Palette, cx: Float, cy: Float, r: Float, width: Float) {
+        paint.strokeWidth = width
+        paint.shader = fade(cy - r, cy + r, p.top, p.bottom)
+        canvas.drawCircle(cx, cy, r, paint)
     }
 
     /** Draws [shape] twice: a deeper blue copy nudged up and left, then the faded shape over it. */
@@ -221,10 +233,10 @@ object Pebbles {
         canvas.drawPath(shape, paint)
     }
 
-    /** A rounded rectangle turned [degrees] about ([px], [py]). */
-    private fun roundRect(rect: RectF, radius: Float, degrees: Float, px: Float, py: Float) = Path().apply {
+    /** A rounded rectangle turned [degrees] about its centre. */
+    private fun roundRect(rect: RectF, radius: Float, degrees: Float) = Path().apply {
         addRoundRect(rect, radius, radius, Path.Direction.CW)
-        transform(Matrix().apply { setRotate(degrees, px, py) })
+        transform(Matrix().apply { setRotate(degrees, rect.centerX(), rect.centerY()) })
     }
 
     private fun fade(top: Float, bottom: Float, from: Long, to: Long) =

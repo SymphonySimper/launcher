@@ -163,13 +163,15 @@ fun SearchField(
     focusRequester: FocusRequester = FocusRequester(),
     onSearch: () -> Unit = {},
     color: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     val colors = MaterialTheme.colorScheme
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = contentColor),
         cursorBrush = SolidColor(colors.primary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, autoCorrectEnabled = false),
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),
@@ -184,13 +186,13 @@ fun SearchField(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (value.isEmpty()) {
-                    Icon(Ic.search, null, tint = colors.onSurfaceVariant)
+                    Icon(Ic.search, null, tint = iconColor)
                     Spacer(Modifier.width(14.dp))
                 }
                 Box(Modifier.weight(1f)) { field() }
                 if (value.isNotEmpty()) {
                     IconButton(onClick = { onValueChange("") }, shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(Sizes.MinTouch)) {
-                        Icon(Ic.close, "Clear")
+                        Icon(Ic.close, "Clear", tint = contentColor)
                     }
                 } else {
                     Spacer(Modifier.width(14.dp))
