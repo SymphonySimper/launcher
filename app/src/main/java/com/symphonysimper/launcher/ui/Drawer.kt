@@ -115,9 +115,8 @@ fun Drawer(
     Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                // Opened from the home search bar: stay empty until something is typed.
-                if (query.isNotBlank()) Results(query, appResults, contacts)
-                else if (!focusSearch) AppGrid(apps, onClose)
+                if (query.isBlank()) AppGrid(apps, onClose)
+                else Results(query, appResults, contacts)
             }
             SearchField(
                 value = query,
@@ -125,7 +124,7 @@ fun Drawer(
                 placeholder = "Search apps, contacts, web",
                 focusRequester = focus,
                 onSearch = ::onEnter,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 24.dp),
             )
         }
     }

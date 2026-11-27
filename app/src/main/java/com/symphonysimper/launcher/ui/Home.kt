@@ -106,7 +106,7 @@ fun Home(
                     )
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(36.dp))
         }
 
         menuAt?.let { at ->
