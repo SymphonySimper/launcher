@@ -82,6 +82,12 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -107,7 +113,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
@@ -122,9 +127,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -134,7 +137,6 @@ import com.symphonysimper.launcher.ui.SearchField
 import com.symphonysimper.launcher.ui.theme.LauncherTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -376,56 +378,84 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     }
 }
 
+/**
+ * Dock apps in order. Hold a row (or drag its handle) to move it: the others slide out of the way, and
+ * the new order is saved when it's let go.
+ */
 @Composable
 private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
     val prefs = LauncherApp.instance.prefs
     val repo = LauncherApp.instance.apps
-    val order = remember(prefs.dock) { prefs.dock.toMutableStateList() }
+    // One list for the page's lifetime: the rows' gesture handlers hold on to it, so it must not be
+    // swapped for a fresh copy when the saved dock changes.
+    val order = remember { prefs.dock.filter { repo.find(it) != null }.toMutableStateList() }
+    val list = rememberLazyListState()
     var dragging by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
-    var rowHeight by remember { mutableFloatStateOf(1f) }
-    val gap = with(LocalDensity.current) { ListItemDefaults.SegmentedGap.toPx() }
+
+    val drag = remember {
+        object {
+            fun start(key: String) { dragging = key; dragOffset = 0f }
+
+            fun move(dy: Float) {
+                val key = dragging ?: return
+                dragOffset += dy
+                val items = list.layoutInfo.visibleItemsInfo
+                val current = items.firstOrNull { it.key == key } ?: return
+                val center = current.offset + dragOffset + current.size / 2
+                // Swap with the row the dragged one's middle is now over; keep it under the finger.
+                val target = items.firstOrNull { it.key != key && it.key in order && center.toInt() in it.offset until it.offset + it.size }
+                    ?: return
+                order.add(order.indexOf(target.key), order.removeAt(order.indexOf(key)))
+                dragOffset += current.offset - target.offset
+            }
+
+            fun end() {
+                if (dragging == null) return
+                dragging = null
+                dragOffset = 0f
+                prefs.dock = order.toList()
+            }
+        }
+    }
 
     PageScaffold("Dock", onBack) {
-        Group {
-            order.forEachIndexed { i, key ->
-                val app = repo.find(key) ?: return@forEachIndexed
-                val currentOrder by rememberUpdatedState(order)
+        LazyColumn(
+            state = list,
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+        ) {
+            itemsIndexed(order, key = { _, key -> key }) { i, key ->
+                val app = repo.find(key) ?: return@itemsIndexed
                 val isDragged = dragging == key
+                val lift by animateFloatAsState(if (isDragged) 1f else 0f, label = "lift")
                 SegmentedListItem(
                     onClick = {},
                     shapes = ListItemDefaults.segmentedShapes(i, order.size),
                     colors = if (isDragged) ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.secondaryContainer) else itemColors,
                     modifier = Modifier
-                        .onSizeChanged { rowHeight = it.height + gap }
+                        // The dragged row follows the finger itself; the rest glide to their new places.
+                        .animateItem(placementSpec = if (isDragged) null else spring(stiffness = Spring.StiffnessMediumLow))
                         .zIndex(if (isDragged) 1f else 0f)
                         .graphicsLayer {
                             translationY = if (isDragged) dragOffset else 0f
-                            val s = if (isDragged) 1.03f else 1f
-                            scaleX = s
-                            scaleY = s
+                            scaleX = 1f + 0.03f * lift
+                            scaleY = scaleX
+                            shadowElevation = 6.dp.toPx() * lift
+                            shape = RoundedCornerShape(16.dp)
                         }
                         .pointerInput(key) {
                             detectDragGesturesAfterLongPress(
-                                onDragStart = { dragging = key; dragOffset = 0f },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    dragOffset += amount.y
-                                    val from = currentOrder.indexOf(key)
-                                    val to = (from + (dragOffset / rowHeight).roundToInt()).coerceIn(0, currentOrder.lastIndex)
-                                    if (to != from) {
-                                        currentOrder.add(to, currentOrder.removeAt(from))
-                                        dragOffset -= (to - from) * rowHeight
-                                    }
-                                },
-                                onDragEnd = { dragging = null; dragOffset = 0f; prefs.dock = order.toList() },
-                                onDragCancel = { dragging = null; dragOffset = 0f; prefs.dock = order.toList() },
+                                onDragStart = { drag.start(key) },
+                                onDrag = { change, amount -> change.consume(); drag.move(amount.y) },
+                                onDragEnd = drag::end,
+                                onDragCancel = drag::end,
                             )
                         },
                     leadingContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = { prefs.dock = prefs.dock - key },
+                                onClick = { order.remove(key); prefs.dock = order.toList() },
                                 shapes = IconButtonDefaults.shapes(),
                                 modifier = Modifier.size(Sizes.MinTouch),
                             ) {
@@ -434,19 +464,33 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                             AppIcon(app, 40.dp)
                         }
                     },
-                    trailingContent = { Icon(Ic.drag, "Hold to reorder") },
+                    trailingContent = {
+                        Icon(
+                            Ic.drag, "Drag to reorder",
+                            Modifier.size(Sizes.MinTouch).wrapContentSize().pointerInput(key) {
+                                detectVerticalDragGestures(
+                                    onDragStart = { drag.start(key) },
+                                    onVerticalDrag = { change, dy -> change.consume(); drag.move(dy) },
+                                    onDragEnd = drag::end,
+                                    onDragCancel = drag::end,
+                                )
+                            },
+                        )
+                    },
                 ) { Title(app.label) }
             }
-        }
-        if (order.size < MAX_DOCK) {
-            FilledTonalButton(
-                onClick = onAdd,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth().padding(12.dp).height(Sizes.Control),
-            ) {
-                Icon(Ic.add, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Add app")
+            if (order.size < MAX_DOCK) {
+                item(key = "add") {
+                    FilledTonalButton(
+                        onClick = onAdd,
+                        shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.animateItem().fillMaxWidth().padding(vertical = 12.dp).height(Sizes.Control),
+                    ) {
+                        Icon(Ic.add, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add app")
+                    }
+                }
             }
         }
     }
