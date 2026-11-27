@@ -81,6 +81,7 @@ Spacing that keeps coming up: 12dp side padding for lists and groups, 16dp paddi
 | `ListItemDefaults.segmentedShapes(i, n)` | Settings list rows: round at the ends of a group, tighter in the middle. | Material 3 |
 | `SquircleShape` | Clipping touch ripples on app icons, matching the icon shape. | `ui/Icons.kt` |
 | 20dp rounded rect | Highlight behind an app cell in the drawer. | `ui/Drawer.kt` |
+| 28dp top corners → 0 | The drawer sheet while it moves; square once fully open. Clipped in `graphicsLayer`. | `MainActivity.kt` |
 | 16dp rounded rect | Text fields, the shadow of a dragged row. | |
 
 Buttons use Material's expressive press shapes so they squish when pressed: pass
@@ -109,6 +110,9 @@ shadow. Add a shadow only when something floats over content that might match it
 | Long-press menu | 3dp |
 | Controls over the wallpaper preview (`FloatShadow`) | 3dp |
 | A row being dragged | 6dp, animated in with the lift |
+
+The drawer sheet has no shadow. It's told apart from home by its solid colour and the flat black scrim
+it pulls over home (up to 28%).
 
 The shadow's shape must be the exact outline that's drawn. For a shape with extra parts (the menu
 card and its arrow), join them into one path (`Path.combine(PathOperation.Union, …)`) so the shadow
@@ -177,11 +181,18 @@ only for failures in `Actions.kt`, which runs outside Compose.
 
 - The theme uses `MotionScheme.expressive()`. Take springs from `MaterialTheme.motionScheme` (the
   drawer uses `defaultSpatialSpec`) rather than writing timings by hand.
-- The drawer follows the finger and springs into place. Its progress is read only inside
-  `graphicsLayer`, so following the finger never recomposes. Do the same for anything animated every
-  frame.
-- Springs can overshoot. Clamp where an overshoot would show something it shouldn't (the drawer
-  stops at the top so wallpaper never peeks under the search bar).
+- **Home ↔ drawer is a sheet, not a crossfade.** The drawer is a solid `pageBackground` sheet that
+  rises from under the search bar and moves 1:1 with the finger: a drag across the whole screen opens
+  it. On release, a fling or passing halfway decides where it springs. Its top corners go from 28dp
+  when closed to square as it reaches the top. Home doesn't fade: it lifts 40dp and shrinks 4% as the
+  sheet covers it, under a flat black scrim that rises to 28%. Don't fade home or the drawer's
+  contents: fading a layer of content shows the wallpaper through every icon and looks muddy. A flat
+  single-colour scrim is the only fade allowed (`LauncherRoot` in `MainActivity.kt`).
+- The drawer's progress is read only inside `graphicsLayer` and draw lambdas, so following the finger
+  never recomposes. Do the same for anything animated every frame. Closed, the sheet sits fully off
+  screen so it can't catch touches meant for home.
+- Springs can overshoot. Clamp where an overshoot would show something it shouldn't (the sheet stops
+  at the top so wallpaper never peeks under the search bar).
 - Apps open with a clip reveal from their icon.
 - Menus fade and scale in over 160ms from where the arrow points.
 - Settings pages crossfade.

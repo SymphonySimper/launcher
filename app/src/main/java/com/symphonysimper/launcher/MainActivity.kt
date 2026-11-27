@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -88,6 +90,16 @@ class MainActivity : ComponentActivity() {
     )
 }
 
+/** How far home lifts, and how much it shrinks, as the drawer sheet covers it. */
+private val HomeLift = 40.dp
+private const val HomeShrink = 0.04f
+
+/** The black scrim over home when the drawer is open. */
+private const val ScrimAlpha = 0.28f
+
+/** The drawer sheet's top corners while it's closed; they square off as it opens. */
+private val SheetCorner = 28.dp
+
 @Composable
 private fun LauncherRoot(resetSignal: Int) {
     val context = LocalContext.current
@@ -126,7 +138,9 @@ private fun LauncherRoot(resetSignal: Int) {
         }
     }
 
-    Box(Modifier.fillMaxSize().onSizeChanged { drawer.range = it.height / 4f }) {
+    // The drawer is a sheet that follows the finger 1:1, so a drag across the whole screen opens it.
+    Box(Modifier.fillMaxSize().onSizeChanged { drawer.range = it.height.toFloat() }) {
+        // Home never fades: it lifts and shrinks a little as the sheet covers it.
         Home(
             dock = dock,
             drawer = drawer,
@@ -136,21 +150,33 @@ private fun LauncherRoot(resetSignal: Int) {
             },
             onSystemSettings = { context.openSystemSettings() },
             modifier = Modifier.graphicsLayer {
-                alpha = 1f - drawer.progress.coerceIn(0f, 1f)
-                compositingStrategy = CompositingStrategy.ModulateAlpha
+                val p = drawer.progress.coerceIn(0f, 1f)
+                translationY = -HomeLift.toPx() * p
+                scaleX = 1f - HomeShrink * p
+                scaleY = scaleX
+            },
+        )
+        // A flat scrim over home. One colour, so fading it is cheap and never shows home's icons through.
+        Box(
+            Modifier.fillMaxSize().drawBehind {
+                val p = drawer.progress.coerceIn(0f, 1f)
+                if (p > 0f) drawRect(Color.Black, alpha = ScrimAlpha * p)
             },
         )
         // The drawer stays composed so opening it is just a redraw; progress is read only while
         // drawing, so following the finger never recomposes. The search bar below stays put on top.
         Box(
             Modifier.fillMaxSize().graphicsLayer {
-                val p = drawer.progress
-                alpha = p.coerceIn(0f, 1f)
-                // Fade each draw rather than an offscreen copy of the whole drawer: far less GPU work.
-                compositingStrategy = CompositingStrategy.ModulateAlpha
-                // Closed, it also moves off screen, so it can't catch touches meant for home. It stops
-                // at the top even when the spring overshoots, or wallpaper would show under the search bar.
-                translationY = if (p <= 0f) size.height else (1f - p.coerceAtMost(1f)) * drawer.range
+                val p = drawer.progress.coerceIn(0f, 1f)
+                // Rises from the bottom with the finger. Closed, it sits just off screen, so it can't catch
+                // touches meant for home. It stops at the top even when the spring overshoots, or
+                // wallpaper would show under the search bar.
+                translationY = (1f - p) * size.height
+                // Round top corners that square off as the sheet reaches the top. All four corners are
+                // rounded, which keeps the fast round-rect clip: the bottom two are below the screen
+                // until the sheet is fully open, when the radius is 0.
+                shape = RoundedCornerShape(SheetCorner.toPx() * (1f - p))
+                clip = true
             },
         ) {
             Drawer(apps = visible, query = query, appResults = appResults, contacts = contacts, drawer = drawer)
