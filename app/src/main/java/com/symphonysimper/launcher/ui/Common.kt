@@ -293,12 +293,14 @@ fun LauncherMenu(
             }
             entries.forEachIndexed { i, entry ->
                 val shape = splitShape(top = i == 0, bottom = i == entries.lastIndex)
-                val arrowUp = when {
-                    !arrow -> null
-                    position.below -> true.takeIf { i == 0 }
-                    else -> false.takeIf { i == entries.lastIndex }
+                val cardArrow = when {
+                    arrow && position.below && i == 0 -> MenuArrow.Up
+                    arrow && !position.below && i == entries.lastIndex -> MenuArrow.Down
+                    else -> MenuArrow.None
                 }
-                MenuCard(shape, color, arrowUp, position.arrowX) { MenuRow(entry, onDismiss) }
+                MenuCard(shape, color, cardArrow, position.arrowX) {
+                    MenuRow(entry, Modifier.clickable { onDismiss(); entry.onClick() })
+                }
             }
             if (pill != null && !position.below) {
                 Spacer(Modifier.height(PillGap - SplitGap * 2))
@@ -311,15 +313,34 @@ fun LauncherMenu(
 @Composable
 private fun MenuPill(entry: MenuEntry, on: Boolean, color: Color, onDismiss: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    MenuCard(CircleShape, if (on) colors.primary else color, null, 0) {
-        MenuRow(entry, onDismiss, if (on) colors.onPrimary else colors.onSurface, toggle = on)
+    MenuCard(CircleShape, if (on) colors.primary else color) {
+        MenuRow(
+            entry,
+            Modifier.toggleable(on, role = Role.Switch) { onDismiss(); entry.onClick() },
+            if (on) colors.onPrimary else colors.onSurface,
+        )
     }
 }
 
+private enum class MenuArrow { None, Up, Down }
+
 @Composable
-private fun MenuCard(shape: Shape, color: Color, arrowUp: Boolean?, arrowX: Int, content: @Composable ColumnScope.() -> Unit) {
-    val outline = if (arrowUp == null) shape else remember(shape, arrowUp, arrowX) { ArrowShape(shape, arrowX.toFloat(), arrowUp) }
-    val room = if (arrowUp == true) PaddingValues(top = ArrowSize.height) else if (arrowUp == false) PaddingValues(bottom = ArrowSize.height) else PaddingValues()
+private fun MenuCard(
+    shape: Shape,
+    color: Color,
+    arrow: MenuArrow = MenuArrow.None,
+    arrowX: Int = 0,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val outline = when (arrow) {
+        MenuArrow.None -> shape
+        else -> remember(shape, arrow, arrowX) { ArrowShape(shape, arrowX.toFloat(), up = arrow == MenuArrow.Up) }
+    }
+    val room = when (arrow) {
+        MenuArrow.None -> PaddingValues()
+        MenuArrow.Up -> PaddingValues(top = ArrowSize.height)
+        MenuArrow.Down -> PaddingValues(bottom = ArrowSize.height)
+    }
     Column(Modifier.fillMaxWidth().shadow(3.dp, outline).background(color, outline).clip(outline).padding(room), content = content)
 }
 
@@ -354,21 +375,12 @@ private class ArrowShape(private val base: Shape, private val arrowX: Float, pri
 }
 
 @Composable
-private fun MenuRow(
-    entry: MenuEntry,
-    onDismiss: () -> Unit,
-    color: Color = MaterialTheme.colorScheme.onSurface,
-    toggle: Boolean? = null,
-) {
-    val onClick = { onDismiss(); entry.onClick() }
+private fun MenuRow(entry: MenuEntry, interaction: Modifier, color: Color = MaterialTheme.colorScheme.onSurface) {
     Row(
         Modifier
             .fillMaxWidth()
             .height(Sizes.Control)
-            .then(
-                if (toggle != null) Modifier.toggleable(toggle, role = Role.Switch) { onClick() }
-                else Modifier.clickable(onClick = onClick),
-            )
+            .then(interaction)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
