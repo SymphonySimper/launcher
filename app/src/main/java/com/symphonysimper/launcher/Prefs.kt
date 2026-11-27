@@ -31,7 +31,6 @@ class Prefs(context: Context) {
     var wallpaperVersion by int("wallpaper_version", 0)
     var stayAwake by bool("stay_awake", false)
     var savedTimeout by int("saved_timeout", 60_000)
-    var notificationsAsked by bool("notifications_asked", false)
     /** Keeps the launcher upright even with auto-rotate on. */
     var portraitOnly by bool("portrait_only", true)
 

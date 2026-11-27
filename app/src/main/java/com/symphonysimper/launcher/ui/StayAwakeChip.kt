@@ -1,14 +1,11 @@
 package com.symphonysimper.launcher.ui
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -36,7 +33,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleStartEffect
-import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.StayAwake
 import com.symphonysimper.launcher.start
 import com.symphonysimper.launcher.ui.theme.Sizes
@@ -49,7 +45,6 @@ class StayAwakeSwitch internal constructor(private val context: Context) {
 
     /** Turning on went to the "Modify system settings" screen; finish the job when home comes back. */
     internal var waitingForPermission = false
-    internal var askNotifications: () -> Unit = {}
 
     fun set(on: Boolean) {
         if (on && !StayAwake.canTurnOn(context)) {
@@ -59,18 +54,11 @@ class StayAwakeSwitch internal constructor(private val context: Context) {
         }
         StayAwake.set(context, on)
         this.on = StayAwake.isOn(context)
-        // The status bar icon needs notification access; ask once, the first time it's turned on.
-        val prefs = LauncherApp.instance.prefs
-        if (on && !StayAwake.canNotify(context) && !prefs.notificationsAsked) {
-            prefs.notificationsAsked = true
-            askNotifications()
-        }
     }
 
-    /** Catches up with changes made elsewhere: the notification's Turn off, or the timeout changed in system settings. */
+    /** Catches up with changes made elsewhere: locking the phone, or the timeout changed in system settings. */
     internal fun refresh() {
         on = StayAwake.isOn(context)
-        if (!on) StayAwake.updateNotification(context) // drop a stale status bar icon
     }
 }
 
@@ -79,10 +67,6 @@ class StayAwakeSwitch internal constructor(private val context: Context) {
 fun rememberStayAwake(): StayAwakeSwitch {
     val context = LocalContext.current
     val switch = remember(context) { StayAwakeSwitch(context) }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        StayAwake.updateNotification(context)
-    }
-    switch.askNotifications = { ask.launch(Manifest.permission.POST_NOTIFICATIONS) }
     LifecycleStartEffect(switch) {
         val wanted = switch.waitingForPermission
         switch.waitingForPermission = false

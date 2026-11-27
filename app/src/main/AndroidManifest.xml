@@ -6,8 +6,6 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <!-- Swiping down on home pulls down the notification shade. -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
-    <!-- Stay awake shows a status bar icon while it's on. -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Wallpaper settings can make the lock screen show the home wallpaper again. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <!-- Stay awake sets the screen timeout to never while it's on. -->
@@ -80,10 +78,6 @@
                 android:name="android.service.wallpaper"
                 android:resource="@xml/wallpaper" />
         </service>
-
-        <receiver
-            android:name=".StayAwakeOffReceiver"
-            android:exported="false" />
 
         <service
             android:name=".BadgeService"

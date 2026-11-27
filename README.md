@@ -2,7 +2,7 @@
 
 A small, fast Android home screen built with Jetpack Compose and Material 3 Expressive. It has
 search-first app and contact lookup, a dock, the Pebbles live wallpaper and Stay awake, which keeps
-the screen on from home's long-press menu.
+the screen on from home's long-press menu until the phone is locked.
 
 ## Releasing
 

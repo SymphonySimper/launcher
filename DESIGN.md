@@ -159,7 +159,7 @@ Reuse these before building anything new.
   home looks unchanged when it's off. `secondaryContainer` with `onSecondaryContainer` content: coffee
   icon (18dp), "Stay awake on" in `labelLarge`, a small close icon (16dp). `Sizes.Chip` (32dp) to look
   at, 48dp to hit. Its start lines up with the date's text. It fades and expands in, and tapping it
-  turns Stay awake off.
+  turns Stay awake off. Locking the phone turns it off too, so there's no notification for it.
 - `rememberLaunchSource()` (`Common.kt`): put its modifier on the icon itself, so the app opens with
   a clip reveal from that icon.
 - Split rows (`Segment`, `IconSegment` in `Drawer.kt`): result rows. Where a piece opens another app

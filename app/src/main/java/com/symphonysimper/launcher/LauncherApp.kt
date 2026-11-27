@@ -14,9 +14,8 @@ class LauncherApp : Application() {
         prefs = Prefs(this)
         apps = AppRepository(this, prefs)
         apps.start()
-        // Android drops our notifications when the app is updated or the phone restarts, but Stay
-        // awake stays on; put its status bar icon back each time the launcher starts.
-        StayAwake.updateNotification(this)
+        // If the launcher restarted while Stay awake was on, keep turning it off when the phone locks.
+        StayAwake.resume(this)
     }
 
     companion object {
