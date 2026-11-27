@@ -274,8 +274,8 @@ val SplitGap = 2.dp
 
 /**
  * Lawnchair-style long-press menu, anchored to the composable it's placed in. [arrow] points at the
- * anchor. A [pill] is a quick toggle on its own fully rounded button above the group, filled with
- * the primary colour while [pillOn].
+ * anchor. A [pill] is a quick toggle on its own fully rounded button on the group's side nearest the
+ * anchor, filled with the primary colour while [pillOn].
  */
 @Composable
 fun LauncherMenu(
@@ -314,29 +314,36 @@ fun LauncherMenu(
                 },
             verticalArrangement = Arrangement.spacedBy(SplitGap),
         ) {
-            pill?.let { entry ->
-                val colors = MaterialTheme.colorScheme
-                MenuCard(
-                    CircleShape,
-                    if (pillOn) colors.primary else color,
-                    arrowUp = true.takeIf { arrow && position.below },
-                    arrowX = position.arrowX,
-                ) {
-                    MenuRow(entry, onDismiss, if (pillOn) colors.onPrimary else colors.onSurface, toggle = pillOn)
-                }
+            // The pill sits on the side nearest the finger: under the group when the menu opens above
+            // the anchor, over it when there's no room and it opens below.
+            if (pill != null && position.below) {
+                MenuPill(pill, pillOn, color, true.takeIf { arrow }, position.arrowX, onDismiss)
                 Spacer(Modifier.height(PillGap - SplitGap * 2))
             }
             entries.forEachIndexed { i, entry ->
                 val shape = splitShape(top = i == 0, bottom = i == entries.lastIndex)
-                // The arrow grows out of the card nearest the anchor.
+                // The arrow grows out of the card nearest the anchor, which is the pill when there is one.
                 val arrowUp = when {
-                    !arrow -> null
-                    position.below -> true.takeIf { i == 0 && pill == null }
+                    !arrow || pill != null -> null
+                    position.below -> true.takeIf { i == 0 }
                     else -> false.takeIf { i == entries.lastIndex }
                 }
                 MenuCard(shape, color, arrowUp, position.arrowX) { MenuRow(entry, onDismiss) }
             }
+            if (pill != null && !position.below) {
+                Spacer(Modifier.height(PillGap - SplitGap * 2))
+                MenuPill(pill, pillOn, color, false.takeIf { arrow }, position.arrowX, onDismiss)
+            }
         }
+    }
+}
+
+/** A menu's quick toggle: a fully rounded card, filled with the primary colour while [on]. */
+@Composable
+private fun MenuPill(entry: MenuEntry, on: Boolean, color: Color, arrowUp: Boolean?, arrowX: Int, onDismiss: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    MenuCard(CircleShape, if (on) colors.primary else color, arrowUp, arrowX) {
+        MenuRow(entry, onDismiss, if (on) colors.onPrimary else colors.onSurface, toggle = on)
     }
 }
 

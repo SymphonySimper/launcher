@@ -148,12 +148,13 @@ Reuse these before building anything new.
   when not.
 - `LauncherMenu` + `MenuEntry` (`Common.kt`): long-press menu. Each entry is its own `splitShape`
   card with a 2dp gap. With `arrow = true` it points at the item it belongs to. It fades and scales
-  in from the arrow. A quick action can sit above the group as a `pill`: a fully rounded card of the
-  same width, 8dp above, its icon and label lined up with the rows below. It's a toggle:
+  in from the arrow. A quick action can sit beside the group as a `pill`: a fully rounded card of the
+  same width, 8dp away on the side nearest the finger (under the group when the menu opens above
+  it, over it when it opens below), its icon and label lined up with the rows. It's a toggle:
   `surfaceBright` with an outlined icon while off, filled `primary` with `onPrimary` content and a
   filled icon while on, with the same label in both states, read out as a switch.
-  Home's menu (long-press empty space) is the Stay awake pill over Launcher settings, System
-  settings and, only while Developer options is turned on, Developer options.
+  Home's menu (long-press empty space) is Launcher settings, System settings and, only while
+  Developer options is turned on, Developer options, with the Stay awake pill nearest the finger.
 - `AppIcon` (`Common.kt`): an app icon. On home and in the drawer (`badge = true`) apps with
   notifications get a `primary` dot at the top-end corner, with a thin notch cut into the icon around
   it instead of an outline, so it reads on any background. The dot stays inside the icon's bounds.
