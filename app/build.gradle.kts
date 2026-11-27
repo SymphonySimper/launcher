@@ -36,14 +36,17 @@ android {
     }
 
     signingConfigs {
-        // The release workflow signs with the key in these variables (see .github/workflows/release.yml).
-        val keystore = providers.environmentVariable("SIGNING_KEYSTORE").orNull
+        // The release key comes from environment variables in the release workflow (see
+        // .github/workflows/release.yml), or from the same names in ~/.gradle/gradle.properties locally,
+        // so local builds and releases share one key and install over each other.
+        fun signing(name: String) = providers.environmentVariable(name).orElse(providers.gradleProperty(name))
+        val keystore = signing("SIGNING_KEYSTORE").orNull
         if (keystore != null) {
             create("release") {
                 storeFile = file(keystore)
-                storePassword = providers.environmentVariable("SIGNING_STORE_PASSWORD").get()
-                keyAlias = providers.environmentVariable("SIGNING_KEY_ALIAS").get()
-                keyPassword = providers.environmentVariable("SIGNING_KEY_PASSWORD").get()
+                storePassword = signing("SIGNING_STORE_PASSWORD").get()
+                keyAlias = signing("SIGNING_KEY_ALIAS").get()
+                keyPassword = signing("SIGNING_KEY_PASSWORD").get()
             }
         }
     }
@@ -53,9 +56,9 @@ android {
             optimization {
                 enable = true
             }
-            // Locally it's signed with the debug key so the fast, optimised build can be installed over a
-            // debug one. Debug builds of Compose apps are much slower than what users get, so judge
-            // smoothness here.
+            // Without the release key (a fresh checkout, or CI's Build workflow) it's signed with the debug
+            // key so the optimised build still installs. Debug builds of Compose apps are much slower than
+            // what users get, so judge smoothness here.
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
