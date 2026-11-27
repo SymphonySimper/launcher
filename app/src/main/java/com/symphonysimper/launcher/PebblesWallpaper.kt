@@ -36,6 +36,7 @@ class PebblesWallpaper : WallpaperService() {
         private var height = 0
         private var photo: Bitmap? = null
         private var photoKey: String? = null
+        private var shownKey: String? = null
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
@@ -64,23 +65,34 @@ class PebblesWallpaper : WallpaperService() {
             if (key in WALLPAPER_KEYS) draw()
         }
 
-        // Plain grey: Android then picks its own default system colours.
-        override fun onComputeColors() = WallpaperColors(android.graphics.Color.valueOf(0xFF808080.toInt()), null, null)
+        /** Material You builds the system colours from these: the photo's own, or the Pebbles palette. */
+        override fun onComputeColors(): WallpaperColors {
+            val dark = isDark(this@PebblesWallpaper)
+            val image = if (prefs.wallpaperImages) photoFor(dark) else null
+            return image?.let(WallpaperColors::fromBitmap) ?: Pebbles.colors(dark)
+        }
 
         fun draw() {
             if (width == 0 || height == 0) return
             val dark = isDark(this@PebblesWallpaper)
             val holder = surfaceHolder
             val canvas = try { holder.lockHardwareCanvas() } catch (_: Exception) { null } ?: return
+            val image = if (prefs.wallpaperImages) photoFor(dark) else null
             try {
-                val image = if (prefs.wallpaperImages) photoFor(dark) else null
                 if (image != null) drawCentreCrop(canvas, image) else Pebbles.draw(canvas, width.toFloat(), height.toFloat(), dark)
             } finally {
                 holder.unlockCanvasAndPost(canvas)
             }
+            // Something else is showing now, so the system colours should follow it.
+            val shown = "$dark:${if (image != null) photoKey else "pebbles"}"
+            if (shown != shownKey) {
+                shownKey = shown
+                notifyColorsChanged()
+            }
         }
 
         private fun photoFor(dark: Boolean): Bitmap? {
+            if (width == 0 || height == 0) return null
             val file = wallpaperFile(this@PebblesWallpaper, dark && !prefs.sameImage)
             val key = "${file.name}:${prefs.wallpaperVersion}:$width"
             if (key == photoKey) return photo
@@ -127,13 +139,28 @@ object Pebbles {
     private const val W = 360f
     private const val H = 800f
 
-    fun draw(canvas: Canvas, width: Float, height: Float, dark: Boolean) {
-        val bg = if (dark) 0xFF000000.toInt() else 0xFFF1F1F1.toInt()
-        val main = if (dark) 0xFF262626.toInt() else 0xFFD3D3D3.toInt()
-        val soft = if (dark) 0xFF171717.toInt() else 0xFFE2E2E2.toInt()
-        val line = if (dark) 0xFFE6E6E6.toInt() else 0xFF111111.toInt()
+    private class Palette(val background: Long, val soft: Long, val main: Long, val line: Long)
 
-        canvas.drawColor(bg)
+    // Blue pebbles on white, or on black in dark mode.
+    private val LIGHT = Palette(background = 0xFFFFFFFF, soft = 0xFFDCE5FB, main = 0xFF5B8DEF, line = 0xFF0F2A6E)
+    private val DARK = Palette(background = 0xFF000000, soft = 0xFF12203F, main = 0xFF3A66D6, line = 0xFFB9CCFF)
+
+    private fun palette(dark: Boolean) = if (dark) DARK else LIGHT
+
+    /** The palette as wallpaper colours, so Material You themes the phone in the same blue. */
+    fun colors(dark: Boolean): WallpaperColors {
+        val p = palette(dark)
+        return WallpaperColors(
+            Color.valueOf(p.main.toInt()),
+            Color.valueOf(p.soft.toInt()),
+            Color.valueOf(p.line.toInt()),
+            if (dark) WallpaperColors.HINT_SUPPORTS_DARK_THEME else WallpaperColors.HINT_SUPPORTS_DARK_TEXT,
+        )
+    }
+
+    fun draw(canvas: Canvas, width: Float, height: Float, dark: Boolean) {
+        val p = palette(dark)
+        canvas.drawColor(p.background.toInt())
         val scale = max(width / W, height / H)
         canvas.save()
         canvas.translate((width - W * scale) / 2f, (height - H * scale) / 2f)
@@ -143,18 +170,18 @@ object Pebbles {
         val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 2.2f
-            color = line
+            color = p.line.toInt()
         }
         // Kept clear of the clock text, the dock and the search bar.
-        fill.color = soft
+        fill.color = p.soft.toInt()
         canvas.drawCircle(60f, 170f, 92f, fill)
 
-        fill.color = main
+        fill.color = p.main.toInt()
         canvas.withRotation(-35f, 285f, 330f) { drawRoundRect(RectF(150f, 278f, 420f, 382f), 52f, 52f, fill) }
         canvas.withRotation(16f, 105f, 470f) { drawRoundRect(RectF(30f, 395f, 180f, 545f), 50f, 50f, fill) }
 
         canvas.drawCircle(296f, 500f, 36f, stroke)
-        fill.color = line
+        fill.color = p.line.toInt()
         canvas.drawCircle(214f, 420f, 9f, fill)
         canvas.restore()
     }
