@@ -16,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 val ColorScheme.isDark: Boolean
     get() = surface.luminance() < 0.5f
 
-/** Settings pages: tinted page with brighter rows in light, near-black page with lifted rows in dark. */
 val ColorScheme.pageBackground: Color
     get() = if (isDark) surface else surfaceContainer
 
@@ -33,7 +32,6 @@ private val RegularType = Typography().run {
     )
 }
 
-/** System (Material You) colours, so the launcher follows the wallpaper palette and dark mode. */
 @Composable
 fun LauncherTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current

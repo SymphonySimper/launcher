@@ -54,7 +54,6 @@ import com.symphonysimper.launcher.ui.searchBarBottom
 import com.symphonysimper.launcher.ui.theme.LauncherTheme
 
 class MainActivity : ComponentActivity() {
-    /** Bumped whenever the launcher should go back to a clean home screen. */
     private var resetSignal by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,7 +93,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        edgeToEdge() // dark mode may have changed; status bar icons follow it
+        edgeToEdge()
     }
 
     private fun edgeToEdge() = enableEdgeToEdge(
@@ -103,14 +102,11 @@ class MainActivity : ComponentActivity() {
     )
 }
 
-/** How far home lifts, and how much it shrinks, as the drawer sheet covers it. */
 private val HomeLift = 40.dp
 private const val HomeShrink = 0.04f
 
-/** The black scrim over home when the drawer is open. */
 private const val ScrimAlpha = 0.28f
 
-/** The drawer sheet's top corners while it's closed; they square off as it opens. */
 private val SheetCorner = 28.dp
 
 @Composable
@@ -126,7 +122,6 @@ private fun LauncherRoot(resetSignal: Int) {
 
     LaunchedEffect(resetSignal) { drawer.snapTo(false) }
     BackHandler(drawer.open) { drawer.animateTo(false) }
-    // However the drawer opens or closes (tap, swipe, back, reset), focus and the query follow it.
     LaunchedEffect(drawer.open) {
         if (drawer.open) {
             if (focusOnOpen) searchFocus.requestFocus()
@@ -151,13 +146,10 @@ private fun LauncherRoot(resetSignal: Int) {
         }
     }
 
-    // The drawer is a sheet that follows the finger 1:1, so a drag across the whole screen opens it.
     Box(Modifier.fillMaxSize().onSizeChanged { drawer.range = it.height.toFloat() }) {
-        // Home never fades: it lifts and shrinks a little as the sheet covers it.
         Home(
             dock = dock,
             drawer = drawer,
-            // A fresh task each time, so settings opens on its main page rather than where it was left.
             onLauncherSettings = {
                 context.startOwn(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
             },
@@ -169,21 +161,15 @@ private fun LauncherRoot(resetSignal: Int) {
                 scaleY = scaleX
             },
         )
-        // A flat scrim over home. One colour, so fading it is cheap and never shows home's icons through.
         Box(
             Modifier.fillMaxSize().drawBehind {
                 val p = drawer.progress.coerceIn(0f, 1f)
                 if (p > 0f) drawRect(Color.Black, alpha = ScrimAlpha * p)
             },
         )
-        // The drawer stays composed so opening it is just a redraw; progress is read only while
-        // drawing, so following the finger never recomposes. The search bar below stays put on top.
         Box(
             Modifier.fillMaxSize().graphicsLayer {
                 val p = drawer.progress.coerceIn(0f, 1f)
-                // Rises from the bottom with the finger. Closed, it sits just off screen, so it can't catch
-                // touches meant for home. It stops at the top even when the spring overshoots, or
-                // wallpaper would show under the search bar.
                 translationY = (1f - p) * size.height
                 // Round top corners that square off as the sheet reaches the top. All four corners are
                 // rounded, which keeps the fast round-rect clip: the bottom two are below the screen
@@ -199,8 +185,6 @@ private fun LauncherRoot(resetSignal: Int) {
             onValueChange = { query = it },
             onSearch = ::onEnter,
             focusRequester = searchFocus,
-            // Tonal rather than the bright surface, which is nearly the same white as Pebbles; it
-            // follows Material You, so it also picks up a photo wallpaper's colours.
             color = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -209,8 +193,6 @@ private fun LauncherRoot(resetSignal: Int) {
                 .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime))
                 .padding(start = 16.dp, end = 16.dp, bottom = searchBarBottom())
                 .fillMaxWidth()
-                // On home the bar is a button: a tap opens the drawer and then focuses it. It can't take
-                // focus while the drawer is closed, so Android restoring focus can't reopen the drawer.
                 .focusProperties { canFocus = drawer.open }
                 .pointerInput(Unit) {
                     awaitEachGesture {

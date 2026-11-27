@@ -23,10 +23,6 @@ import java.io.File
 import kotlin.math.ceil
 import kotlin.math.max
 
-/**
- * The launcher's wallpaper: generated Pebbles, or the user's own photos, picked by dark mode.
- * It only draws when the surface changes or dark mode flips; nothing animates.
- */
 class PebblesWallpaper : WallpaperService() {
     private val engines = mutableSetOf<PebblesEngine>()
 
@@ -74,11 +70,9 @@ class PebblesWallpaper : WallpaperService() {
             if (key in WALLPAPER_KEYS) draw()
         }
 
-        /** Material You builds the system colours from these: the photo's own, or the Pebbles palette. */
         override fun onComputeColors(): WallpaperColors {
             val dark = isDark(this@PebblesWallpaper)
             if (!prefs.wallpaperImages) return Pebbles.colors(dark)
-            // The photo shown is a GPU-only bitmap that can't be read back, so read a small copy instead.
             val small = decodeSampled(photoFile(dark), COLOR_SAMPLE, COLOR_SAMPLE) ?: return Pebbles.colors(dark)
             return WallpaperColors.fromBitmap(small).also { small.recycle() }
         }
@@ -94,7 +88,6 @@ class PebblesWallpaper : WallpaperService() {
             } finally {
                 holder.unlockCanvasAndPost(canvas)
             }
-            // Something else is showing now, so the system colours should follow it.
             val shown = "$dark:${if (image != null) photoKey else "pebbles"}"
             if (shown != shownKey) {
                 shownKey = shown
@@ -108,8 +101,6 @@ class PebblesWallpaper : WallpaperService() {
             val key = "${file.name}:${prefs.wallpaperVersion}:$width"
             if (key == photoKey) return photo
             photo?.recycle()
-            // Keep only the GPU copy: a screen-sized photo is about 10 MB, and drawing it would hold a
-            // second copy on the GPU anyway.
             photo = decodeSampled(file, width, height)?.let { decoded ->
                 decoded.copy(Bitmap.Config.HARDWARE, false)?.also { decoded.recycle() } ?: decoded
             }
@@ -131,10 +122,6 @@ class PebblesWallpaper : WallpaperService() {
     }
 
     companion object {
-        /**
-         * Engines drawing on the real home or lock screen, not a preview. The service shares the app's
-         * process, so this is how settings knows Pebbles is set: Android won't tell other apps.
-         */
         private var liveEngines by mutableIntStateOf(0)
 
         val isActive get() = liveEngines > 0
@@ -147,16 +134,12 @@ class PebblesWallpaper : WallpaperService() {
         fun wallpaperFile(context: Context, dark: Boolean) =
             File(context.filesDir, if (dark) "wallpaper_dark" else "wallpaper_light")
 
-        /** Longest side of the copy Material You reads a photo's colours from. */
         private const val COLOR_SAMPLE = 128
 
-        /** Decodes [file] scaled to just cover [w]x[h], never larger. */
         fun decodeSampled(file: File, w: Int, h: Int): Bitmap? {
             if (!file.exists()) return null
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.path, bounds)
-            // Halving while decoding is cheap but can leave it up to twice too big each way (four times
-            // the memory), so scale the rest of the way after.
             var sample = 1
             while (bounds.outWidth / (sample * 2) >= w && bounds.outHeight / (sample * 2) >= h) sample *= 2
             val decoded = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
@@ -169,15 +152,10 @@ class PebblesWallpaper : WallpaperService() {
     }
 }
 
-/** The generated wallpaper. Drawn in a 360x800 space, scaled to cover the screen. */
 object Pebbles {
     private const val W = 360f
     private const val H = 800f
 
-    /**
-     * Like the Phone and Messages icons: shapes fade from lavender ([top]) to bright blue ([bottom]),
-     * with a deeper blue copy ([back]) peeking out behind them at the top left.
-     */
     private class Palette(val background: Long, val soft: Long, val softTop: Long, val top: Long, val bottom: Long, val back: Long)
 
     private val LIGHT = Palette(
@@ -191,7 +169,6 @@ object Pebbles {
 
     private fun palette(dark: Boolean) = if (dark) DARK else LIGHT
 
-    /** The palette as wallpaper colours, so Material You themes the phone in the same blues. */
     fun colors(dark: Boolean): WallpaperColors {
         val p = palette(dark)
         return WallpaperColors(
@@ -211,12 +188,10 @@ object Pebbles {
         canvas.scale(scale, scale)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        // Pebbles fall from the top right to the bottom left, growing as they go, between a soft
-        // circle behind the clock and another bleeding off behind the dock.
         soft(canvas, paint, 58f, 150f, 104f, p.softTop, p.soft)
         soft(canvas, paint, 335f, 650f, 170f, p.soft, p.softTop)
 
-        pebble(canvas, paint, p, roundRect(RectF(276f, 112f, 342f, 178f), 24f, 18f)) // clear of the clock
+        pebble(canvas, paint, p, roundRect(RectF(276f, 112f, 342f, 178f), 24f, 18f))
         pebble(canvas, paint, p, roundRect(RectF(170f, 248f, 360f, 352f), 52f, -30f))
         pebble(canvas, paint, p, roundRect(RectF(-52f, 405f, 218f, 565f), 80f, 20f))
 
@@ -237,7 +212,6 @@ object Pebbles {
         canvas.drawCircle(cx, cy, r, paint)
     }
 
-    /** Draws [shape] twice: a deeper blue copy nudged up and left, then the faded shape over it. */
     private fun pebble(canvas: Canvas, paint: Paint, p: Palette, shape: Path) {
         paint.shader = null
         paint.color = p.back.toInt()
@@ -245,14 +219,11 @@ object Pebbles {
         canvas.translate(-7f, -6f)
         canvas.drawPath(shape, paint)
         canvas.restore()
-        // The fade runs straight down the screen however the shape is turned, as on the icons, and
-        // reaches full blue a little past halfway.
         val bounds = RectF().also { shape.computeBounds(it, true) }
         paint.shader = fade(bounds.top, bounds.top + bounds.height() * 0.65f, p.top, p.bottom)
         canvas.drawPath(shape, paint)
     }
 
-    /** A rounded rectangle turned [degrees] about its centre. */
     private fun roundRect(rect: RectF, radius: Float, degrees: Float) = Path().apply {
         addRoundRect(rect, radius, radius, Path.Direction.CW)
         transform(Matrix().apply { setRotate(degrees, rect.centerX(), rect.centerY()) })

@@ -13,7 +13,6 @@ import kotlin.reflect.KProperty
 
 const val MAX_DOCK = 4
 
-/** Every launcher setting. Backed by SharedPreferences, observable from Compose. */
 class Prefs(context: Context) {
     val sp: SharedPreferences = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
 
@@ -27,13 +26,10 @@ class Prefs(context: Context) {
     var customUrl by string("custom_url", "")
     var wallpaperImages by bool("wallpaper_images", false)
     var sameImage by bool("same_image", false)
-    /** Bumped whenever a wallpaper image file changes, so the wallpaper redraws. */
     var wallpaperVersion by int("wallpaper_version", 0)
     var stayAwake by bool("stay_awake", false)
     var savedTimeout by int("saved_timeout", 60_000)
-    /** Keeps the launcher upright even with auto-rotate on. */
     var portraitOnly by bool("portrait_only", true)
-    /** Pixel-style themed icons, where the app provides one: on in the dock, off in the drawer. */
     var themedDock by bool("themed_dock", true)
     var themedDrawer by bool("themed_drawer", false)
 
@@ -63,7 +59,6 @@ class Prefs(context: Context) {
         return json.toString(2).replace("\\/", "/")
     }
 
-    /** Applies a backup. Throws if the text is not a backup made by [toJson]. */
     fun fromJson(text: String) {
         val json = JSONObject(text)
         require(json.optInt("version") == 1) { "Unknown backup version" }

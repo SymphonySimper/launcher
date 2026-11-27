@@ -14,7 +14,6 @@ class LauncherApp : Application() {
         prefs = Prefs(this)
         apps = AppRepository(this, prefs)
         apps.start()
-        // If the launcher restarted while Stay awake was on, keep turning it off when the phone locks.
         StayAwake.resume(this)
     }
 

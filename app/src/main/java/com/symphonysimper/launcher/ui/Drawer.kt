@@ -80,12 +80,9 @@ import com.symphonysimper.launcher.ui.theme.Sizes
 
 private const val COLUMNS = 4
 
-/** App drawer. When there's a query it shows search results instead of the grid. The search bar itself lives in LauncherRoot. */
 @Composable
 fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List<Contact>, drawer: DrawerState) {
     Surface(color = MaterialTheme.colorScheme.pageBackground, modifier = Modifier.fillMaxSize()) {
-        // Lists run to the bottom edge and scroll behind the floating search bar; this padding only
-        // keeps their last items clear of it once scrolled to the end.
         val bottom = WindowInsets.systemBars.union(WindowInsets.ime).asPaddingValues().calculateBottomPadding() + searchBarSpace()
         Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
             if (query.isBlank()) AppGrid(apps, drawer, bottom)
@@ -94,7 +91,6 @@ fun Drawer(apps: List<App>, query: String, appResults: List<App>, contacts: List
     }
 }
 
-/** Contacts matching [query], looked up off the main thread once typing settles. */
 @Composable
 fun rememberContacts(query: String): List<Contact> {
     val context = LocalContext.current
@@ -105,7 +101,7 @@ fun rememberContacts(query: String): List<Contact> {
             contacts = emptyList()
             return@LaunchedEffect
         }
-        delay(60) // let fast typing settle before hitting the contacts provider
+        delay(60)
         contacts = withContext(Dispatchers.IO) { context.searchContacts(query) }
     }
     return contacts
@@ -114,7 +110,6 @@ fun rememberContacts(query: String): List<Contact> {
 @Composable
 private fun AppGrid(apps: List<App>, drawer: DrawerState, bottom: Dp) {
     val grid = rememberLazyGridState()
-    // Each time the drawer finishes closing, the grid goes back to the top for next time.
     LaunchedEffect(drawer) {
         snapshotFlow { drawer.progress <= 0f }.filter { it }.collect { grid.scrollToItem(0) }
     }
@@ -129,7 +124,6 @@ private fun AppGrid(apps: List<App>, drawer: DrawerState, bottom: Dp) {
     }
 }
 
-/** Results sit at the bottom: web search on top, then contacts, then apps nearest the thumb. */
 @Composable
 private fun Results(query: String, apps: List<App>, contacts: List<Contact>, bottom: Dp) {
     val context = LocalContext.current
@@ -170,14 +164,12 @@ private fun Results(query: String, apps: List<App>, contacts: List<Contact>, bot
     }
 }
 
-/** The installed app's own icon (e.g. the real WhatsApp logo), or null if it isn't installed. */
 @Composable
 private fun rememberAppIcon(pkg: String?): ImageBitmap? {
     val all = LauncherApp.instance.apps.all
     return remember(all, pkg) { all.firstOrNull { it.pkg == pkg }?.icon }
 }
 
-/** Look and tap target shared by every piece of a split row. */
 @Composable
 private fun Modifier.segment(shape: Shape, highlight: Boolean, onClick: () -> Unit): Modifier {
     val colors = MaterialTheme.colorScheme
@@ -187,7 +179,6 @@ private fun Modifier.segment(shape: Shape, highlight: Boolean, onClick: () -> Un
         .clickable(onClick = onClick)
 }
 
-/** One piece of a split row. */
 @Composable
 private fun Segment(
     shape: Shape,
@@ -202,7 +193,6 @@ private fun Segment(
     content = content,
 )
 
-/** Icon-only end piece of a split row (Play Store, WhatsApp, Call): the app's own icon, or [fallback]. */
 @Composable
 private fun IconSegment(shape: Shape, highlight: Boolean, image: ImageBitmap?, fallback: ImageVector, label: String, onClick: () -> Unit) {
     Box(Modifier.width(Sizes.ControlLarge).segment(shape, highlight, onClick), contentAlignment = Alignment.Center) {
@@ -210,14 +200,12 @@ private fun IconSegment(shape: Shape, highlight: Boolean, image: ImageBitmap?, f
     }
 }
 
-/** An app's own icon in search results, or a plain [fallback] icon when that app isn't installed. */
 @Composable
 private fun ResultIcon(image: ImageBitmap?, fallback: ImageVector, label: String?) {
     if (image != null) Image(image, label, Modifier.size(32.dp))
     else Icon(fallback, label, tint = MaterialTheme.colorScheme.onSurface)
 }
 
-/** Play Store search on the left, web search with the default browser's icon on the right. */
 @Composable
 private fun WebRow(query: String, highlight: Boolean) {
     val context = LocalContext.current
@@ -266,7 +254,6 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
             Spacer(Modifier.height(10.dp))
             Text(
                 app.label,
-                // No extra letter spacing, so longer names fit before they're cut off.
                 style = MaterialTheme.typography.bodyMedium.copy(letterSpacing = 0.sp),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -290,7 +277,6 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
     }
 }
 
-/** Contact | WhatsApp | Call. Call is always the end piece, so it stays put for muscle memory. */
 @Composable
 private fun ContactRow(
     contact: Contact,
@@ -323,7 +309,6 @@ private fun ContactRow(
     }
 }
 
-/** Name starts with the query first, then a word starts with it, then it appears anywhere. */
 fun rankApps(apps: List<App>, query: String): List<App> {
     val q = query.trim().lowercase()
     if (q.isEmpty()) return emptyList()

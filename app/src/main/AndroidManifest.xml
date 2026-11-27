@@ -4,16 +4,12 @@
 
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
-    <!-- Swiping down on home pulls down the notification shade. -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
-    <!-- Wallpaper settings can make the lock screen show the home wallpaper again. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
-    <!-- Stay awake sets the screen timeout to never while it's on. -->
     <uses-permission
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- Package visibility: launchable apps, plus the apps we hand off to. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

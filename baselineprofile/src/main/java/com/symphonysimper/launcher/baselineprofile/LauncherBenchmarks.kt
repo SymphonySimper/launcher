@@ -11,12 +11,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Compares the launcher with and without the baseline profile: cold start, and the frames of the first
- * drawer open and scroll after it starts. Run with
- *
- *   ./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
- */
 @RunWith(AndroidJUnit4::class)
 class LauncherBenchmarks {
     @get:Rule

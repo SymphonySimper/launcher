@@ -148,7 +148,6 @@ class SettingsActivity : ComponentActivity() {
         setContent { LauncherTheme { SettingsRoot(resumes) } }
     }
 
-    /** Bumped on every resume so rows re-check permissions granted elsewhere. */
     private var resumes by mutableIntStateOf(0)
 
     override fun onResume() {
@@ -159,7 +158,6 @@ class SettingsActivity : ComponentActivity() {
 
 private enum class Page(val parent: Page?) { Main(null), Dock(Main), AddApp(Dock), Hidden(Main), Engine(Main), Wallpaper(Main) }
 
-/** Shows a message in a snackbar, so feedback uses the app's style rather than a system toast. */
 private val LocalNotify = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 @Composable
@@ -195,8 +193,6 @@ private fun SettingsRoot(resumes: Int) {
     }
 }
 
-// ---------------------------------------------------------------- building blocks
-
 @Composable
 private fun PageScaffold(
     title: String,
@@ -230,7 +226,6 @@ private fun PageScaffold(
     }
 }
 
-/** List row title: one line. */
 @Composable
 private fun Title(text: String) = Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
@@ -297,20 +292,19 @@ private fun MonoSwitch(checked: Boolean) = Switch(
     } else null,
 )
 
-// ---------------------------------------------------------------- pages
-
 @Composable
 private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
     val notify = LocalNotify.current
 
-    @Suppress("UNUSED_EXPRESSION") resumes // re-read the checks below after returning from system screens
     val roles = context.getSystemService(RoleManager::class.java)
-    val isDefault = roles.isRoleHeld(RoleManager.ROLE_HOME)
-    val badgeAccess = context.getSystemService(NotificationManager::class.java)
-        .isNotificationListenerAccessGranted(ComponentName(context, BadgeService::class.java))
-    val contactsAccess = context.hasContactsPermission()
+    val isDefault = remember(resumes) { roles.isRoleHeld(RoleManager.ROLE_HOME) }
+    val badgeAccess = remember(resumes) {
+        context.getSystemService(NotificationManager::class.java)
+            .isNotificationListenerAccessGranted(ComponentName(context, BadgeService::class.java))
+    }
+    val contactsAccess = remember(resumes) { context.hasContactsPermission() }
 
     // The role dialog needs to know who is asking, which it only learns when started for a result.
     // If it's dismissed or Android won't show it (after two refusals), open the system's home app picker.
@@ -385,16 +379,10 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
     }
 }
 
-/**
- * Dock apps in order. Hold a row (or drag its handle) to move it: the others slide out of the way, and
- * the new order is saved when it's let go.
- */
 @Composable
 private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
     val prefs = LauncherApp.instance.prefs
     val repo = LauncherApp.instance.apps
-    // One list for the page's lifetime: the rows' gesture handlers hold on to it, so it must not be
-    // swapped for a fresh copy when the saved dock changes.
     val order = remember { prefs.dock.filter { repo.find(it) != null }.toMutableStateList() }
     val list = rememberLazyListState()
     var dragging by remember { mutableStateOf<String?>(null) }
@@ -410,7 +398,6 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                 val items = list.layoutInfo.visibleItemsInfo
                 val current = items.firstOrNull { it.key == key } ?: return
                 val center = current.offset + dragOffset + current.size / 2
-                // Swap with the row the dragged one's middle is now over; keep it under the finger.
                 val target = items.firstOrNull { it.key != key && it.key in order && center.toInt() in it.offset until it.offset + it.size }
                     ?: return
                 order.add(order.indexOf(target.key), order.removeAt(order.indexOf(key)))
@@ -441,7 +428,6 @@ private fun DockPage(onBack: () -> Unit, onAdd: () -> Unit) {
                     shapes = ListItemDefaults.segmentedShapes(i, order.size),
                     colors = if (isDragged) ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.secondaryContainer) else itemColors,
                     modifier = Modifier
-                        // The dragged row follows the finger itself; the rest glide to their new places.
                         .animateItem(placementSpec = if (isDragged) null else spring(stiffness = Spring.StiffnessMediumLow))
                         .zIndex(if (isDragged) 1f else 0f)
                         .graphicsLayer {
@@ -543,10 +529,6 @@ private fun AddAppPage(onBack: () -> Unit) {
     }
 }
 
-/**
- * Hidden apps on top, then the rest. Switching one glides it to its new section while the rows on
- * screen stay where they are, so it's clear where it went.
- */
 @Composable
 private fun HiddenPage(onBack: () -> Unit) {
     val prefs = LauncherApp.instance.prefs
@@ -571,7 +553,7 @@ private fun HiddenPage(onBack: () -> Unit) {
                 atTop -> state.requestScrollToItem(0)
                 anchor != null -> state.requestScrollToItem(
                     rows(prefs.hidden).indexOf(anchor.key).coerceAtLeast(0),
-                    -anchor.offset, // offsets count from the start of the content, after its padding
+                    -anchor.offset,
                 )
             }
         }
@@ -643,24 +625,17 @@ private fun EnginePage(onBack: () -> Unit) {
     }
 }
 
-/**
- * The wallpaper fills the page so it can be judged as it will look. Controls float over it in the
- * system theme: the source at the top, light / dark and image actions in a toolbar at the bottom.
- */
 @Composable
 private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
     val notify = LocalNotify.current
     val wallpapers = remember { context.getSystemService(WallpaperManager::class.java) }
-    // Whether the lock screen has a wallpaper of its own rather than showing home's. Re-checked after
-    // returning from anywhere that could have changed it.
     var lockChanged by remember { mutableIntStateOf(0) }
     val lockDiffers = remember(resumes, lockChanged) { wallpapers.getWallpaperId(WallpaperManager.FLAG_LOCK) >= 0 }
     var showDark by rememberSaveable { mutableStateOf(PebblesWallpaper.isDark(context)) }
     val images = prefs.wallpaperImages
     val linked = images && prefs.sameImage
-    // With one image for both modes it lives in the light slot.
     val slotDark = showDark && !linked
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -681,7 +656,6 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     val shown = if (images) Preview.Photo(slotDark, if (slotDark) darkImage else lightImage) else Preview.Pebbles(showDark)
     val previewDark = when (shown) {
         is Preview.Pebbles -> shown.dark
-        // An empty slot shows the page's own surface.
         is Preview.Photo -> if (shown.image != null) shown.image.isMostlyDark() else MaterialTheme.colorScheme.isDark
     }
     SystemBarIcons(lightIcons = previewDark)
@@ -701,7 +675,6 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
             }
         }
 
-        // Bottom controls sit in thumb reach, lifted clear of the gesture bar.
         Row(
             Modifier
                 .align(Alignment.BottomCenter)
@@ -710,7 +683,6 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // A split button: the light / dark group leads, the pencil trails, joined by a narrow gap.
             Row(horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
                 PillGroup(Modifier.height(Sizes.ControlLarge), shape = splitPill(end = !images)) {
                     PillToggle(Ic.sun, "Light", checked = !showDark || linked) { showDark = false }
@@ -759,7 +731,6 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     }
 }
 
-/** A pill whose sides can meet a neighbour, as in a split button: fully round outside, 4dp where they join. */
 private fun splitPill(start: Boolean = true, end: Boolean = true): Shape {
     val round = CornerSize(50)
     val joint = CornerSize(4.dp)
@@ -771,10 +742,8 @@ private fun splitPill(start: Boolean = true, end: Boolean = true): Shape {
     )
 }
 
-/** Elevation of the controls floating over the wallpaper. */
 private val FloatShadow = 3.dp
 
-/** An icon button on the system surface, for controls floating over the wallpaper. */
 @Composable
 private fun RoundButton(
     icon: ImageVector,
@@ -789,12 +758,10 @@ private fun RoundButton(
         onClick = onClick,
         shape = shape,
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor, contentColor = contentColor),
-        // A soft shadow lifts it off the wallpaper, which can be as light as the button.
         modifier = Modifier.size(size).shadow(FloatShadow, shape),
     ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
 }
 
-/** A connected button group: pill-shaped toggles inside one pill on the system surface. */
 @Composable
 private fun PillGroup(modifier: Modifier = Modifier, shape: Shape = CircleShape, content: @Composable RowScope.() -> Unit) {
     Row(
@@ -807,7 +774,6 @@ private fun PillGroup(modifier: Modifier = Modifier, shape: Shape = CircleShape,
     )
 }
 
-/** Sets the status and navigation bar icons to read against the preview, restoring them on leaving. */
 @Composable
 private fun SystemBarIcons(lightIcons: Boolean) {
     val view = LocalView.current
@@ -827,7 +793,6 @@ private fun SystemBarIcons(lightIcons: Boolean) {
 
 private val PillShapes @Composable get() = ToggleButtonShapes(CircleShape, ToggleButtonDefaults.pressedShape, CircleShape)
 
-/** A toggle inside a [PillGroup]: see-through until checked. */
 @Composable
 private fun pillColors(
     checkedColor: Color = MaterialTheme.colorScheme.secondaryContainer,
@@ -872,13 +837,11 @@ private fun PillToggle(
     ) { Icon(icon, label, Modifier.size(Sizes.Icon)) }
 }
 
-/** What the wallpaper preview shows; a change crossfades. */
 private sealed interface Preview {
     data class Pebbles(val dark: Boolean) : Preview
     data class Photo(val dark: Boolean, val image: ImageBitmap?) : Preview
 }
 
-/** Loads the user's light or dark wallpaper image to cover [size], reloading when [version] changes. */
 @Composable
 private fun rememberWallpaperImage(dark: Boolean, version: Int, size: IntSize): ImageBitmap? {
     val context = LocalContext.current
@@ -891,7 +854,6 @@ private fun rememberWallpaperImage(dark: Boolean, version: Int, size: IntSize): 
     return image
 }
 
-/** Whether the top of the image, where the status bar icons sit, is dark. Samples a coarse grid. */
 private fun ImageBitmap.isMostlyDark(): Boolean {
     val bitmap = asAndroidBitmap()
     var sum = 0f

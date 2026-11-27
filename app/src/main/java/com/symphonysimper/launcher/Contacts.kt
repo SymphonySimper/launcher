@@ -13,14 +13,12 @@ class Contact(
     val lookupKey: String,
     val name: String,
     val phone: String?,
-    /** Row WhatsApp adds to the contact; null when the person isn't on WhatsApp. */
     val whatsAppDataId: Long?,
 )
 
 fun Context.hasContactsPermission() =
     checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
 
-/** Contacts whose name matches [query], with their main number and WhatsApp row. Call off the main thread. */
 fun Context.searchContacts(query: String, limit: Int = 4): List<Contact> {
     if (query.isBlank() || !hasContactsPermission()) return emptyList()
     data class Base(val id: Long, val lookup: String, val name: String)

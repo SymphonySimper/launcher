@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  An L for Launcher made of two pebble pills, styled like the Pebbles wallpaper: a deeper blue copy
-  behind, a lavender-to-blue fade on top, and a thin ring.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"

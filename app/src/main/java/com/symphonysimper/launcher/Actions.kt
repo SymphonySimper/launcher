@@ -48,17 +48,9 @@ fun Context.start(intent: Intent, options: Bundle? = null) {
     }
 }
 
-/**
- * Opens one of the launcher's own screens. Android would show a splash screen with the launcher's
- * icon first, as if it were starting an app; a plain page-coloured window is quicker and calmer.
- */
 fun Context.startOwn(intent: Intent) =
     start(intent, ActivityOptions.makeBasic().setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR).toBundle())
 
-/**
- * Opens [app]. Given the icon's [bounds] within [view], the app grows out of the icon as it does in
- * Launcher3, which also makes the launch feel quicker.
- */
 fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
     var options: Bundle? = null
     var source: Rect? = null
@@ -74,7 +66,6 @@ fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
     }
 }
 
-/** Opens [intent], or [fallback] when nothing handles it, growing it out of [bounds] within [view]. */
 fun Context.open(intent: Intent, fallback: Intent? = null, view: View? = null, bounds: Rect? = null) {
     val options = if (view != null && bounds != null) {
         ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height()).toBundle()
@@ -90,10 +81,8 @@ fun Context.open(intent: Intent, fallback: Intent? = null, view: View? = null, b
     toast("No app can open this")
 }
 
-/** The clock app's alarms. */
 fun clockIntent() = Intent(AlarmClock.ACTION_SHOW_ALARMS)
 
-/** The calendar app on today, or just the calendar app if it doesn't take a date. */
 fun calendarIntents(now: Long) =
     Intent(Intent.ACTION_VIEW, CalendarContract.CONTENT_URI.buildUpon().appendPath("time").appendPath(now.toString()).build()) to
         Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR)
@@ -149,10 +138,8 @@ fun Context.expandNotifications() {
 }
 
 
-/** Keeps this activity upright while Portrait only is on, following the setting as it changes. */
 fun ComponentActivity.followPortraitOnly() {
     val prefs = LauncherApp.instance.prefs
-    // Main.immediate: the first value applies right here in onCreate, before anything is drawn sideways.
     lifecycleScope.launch {
         snapshotFlow { prefs.portraitOnly }.collect { portrait ->
             requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED

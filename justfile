@@ -1,13 +1,9 @@
-# Common tasks for the launcher. Run `just` to list them.
-
 package := "com.symphonysimper.launcher"
 home := package + "/.MainActivity"
 
-# Gradle needs a JDK. Without JAVA_HOME, use the one bundled with Android Studio.
 studio_jbr := `for d in "$(grep -o '/nix/store/[a-z0-9]*-android-studio-unwrapped[^/" ]*' "$(readlink -f "$(command -v android-studio)" 2>/dev/null)" 2>/dev/null | head -1)/jbr" /opt/android-studio/jbr "$HOME/android-studio/jbr" "/Applications/Android Studio.app/Contents/jbr/Contents/Home"; do [ -x "$d/bin/java" ] && echo "$d" && break; done; true`
 export JAVA_HOME := env("JAVA_HOME", studio_jbr)
 
-# Keeps Gradle from uninstalling the launcher after device tests, which would wipe its settings.
 keep_installed := "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
 
 [private]

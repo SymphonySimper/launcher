@@ -66,18 +66,15 @@ fun Home(
 ) {
     var menuAt by remember { mutableStateOf<Offset?>(null) }
     val context = LocalContext.current
-    // Whether the current swipe can still pull down the shade: not once it has done so or moved the drawer.
     var canPullShade by remember { mutableStateOf(false) }
     val stayAwake = rememberStayAwake()
     Box(
         modifier
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures(onLongPress = { menuAt = it }) }
-            // Swiping up pulls the drawer open with the finger; swiping down pulls down the notification shade.
             .draggable(
                 rememberDraggableState { dy ->
                     drawer.drag(dy)
-                    // A swipe that has moved the drawer at all is about the drawer, not the shade.
                     if (drawer.progress > 0f) canPullShade = false
                     // Android only lets the system drag the shade with a finger, so the next best thing is
                     // to start it the moment the swipe is known to be downward (past the touch slop).
@@ -93,7 +90,6 @@ fun Home(
     ) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             Clock(Modifier.padding(start = ClockStart - ClockTapPadding, top = 36.dp))
-            // Only there while Stay awake is on, lined up with the date's text.
             AnimatedVisibility(
                 stayAwake.on,
                 enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
@@ -118,7 +114,7 @@ fun Home(
                     )
                 }
             }
-            Spacer(Modifier.height(18.dp + searchBarSpace())) // the shared search bar sits here
+            Spacer(Modifier.height(18.dp + searchBarSpace()))
         }
 
         menuAt?.let { at ->
@@ -130,7 +126,6 @@ fun Home(
                     ),
                     arrow = false,
                     onDismiss = { menuAt = null },
-                    // The fill and the icon show whether it's on, so the label stays the same.
                     pill = MenuEntry(if (stayAwake.on) Ic.coffee else Ic.coffeeOutline, "Stay awake") {
                         stayAwake.set(!stayAwake.on)
                     },
@@ -141,23 +136,16 @@ fun Home(
     }
 }
 
-/** Where the clock's digits start. */
 private val ClockStart = 26.dp
 
-/** The date sits a little in from the clock, to line up with the digits' visible edge. */
 private val DateIndent = 3.dp
 
-/** Room around the clock and date inside their tap highlight. */
 private val ClockTapPadding = 8.dp
 
-/** Big time with the date below. Updates once a minute from the system tick. Tapping the time opens the
- *  clock app, tapping the date opens the calendar. */
 @Composable
 private fun Clock(modifier: Modifier) {
     val context = LocalContext.current
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    // Listens only while home is on screen: once a minute, and never while another app is open.
-    // Coming back catches up straight away.
     LifecycleStartEffect(Unit) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context, i: Intent) {

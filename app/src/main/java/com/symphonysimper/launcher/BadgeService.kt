@@ -5,7 +5,6 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.symphonysimper.launcher.ui.Badges
 
-/** Counts each app's notifications for the badges on app icons. */
 class BadgeService : NotificationListenerService() {
     override fun onListenerConnected() = refresh()
     override fun onNotificationPosted(sbn: StatusBarNotification) = refresh()

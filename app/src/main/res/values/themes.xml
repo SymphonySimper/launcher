@@ -8,14 +8,12 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <!-- Home: draw over the wallpaper, no window background to paint. -->
     <style name="Theme.Launcher.Home">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackgroundCacheHint">@null</item>
     </style>
 
-    <!-- Settings: opens on a plain window in the page's colour instead of a splash screen. -->
     <style name="Theme.Launcher.Settings">
         <item name="android:windowBackground">@color/settings_page</item>
         <item name="android:windowSplashScreenBackground">@color/settings_page</item>

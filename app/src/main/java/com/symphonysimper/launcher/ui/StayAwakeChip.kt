@@ -37,13 +37,11 @@ import com.symphonysimper.launcher.StayAwake
 import com.symphonysimper.launcher.start
 import com.symphonysimper.launcher.ui.theme.Sizes
 
-/** Stay awake as home sees it: whether it's on, and turning it on or off with the permissions it needs. */
 @Stable
 class StayAwakeSwitch internal constructor(private val context: Context) {
     var on by mutableStateOf(StayAwake.isOn(context))
         private set
 
-    /** Turning on went to the "Modify system settings" screen; finish the job when home comes back. */
     internal var waitingForPermission = false
 
     fun set(on: Boolean) {
@@ -56,13 +54,11 @@ class StayAwakeSwitch internal constructor(private val context: Context) {
         this.on = StayAwake.isOn(context)
     }
 
-    /** Catches up with changes made elsewhere: locking the phone, or the timeout changed in system settings. */
     internal fun refresh() {
         on = StayAwake.isOn(context)
     }
 }
 
-/** Keeps [StayAwakeSwitch.on] current while home is on screen, from timeout changes rather than polling. */
 @Composable
 fun rememberStayAwake(): StayAwakeSwitch {
     val context = LocalContext.current
@@ -80,13 +76,11 @@ fun rememberStayAwake(): StayAwakeSwitch {
     return switch
 }
 
-/** Shown under the date while Stay awake is on. Tapping it turns Stay awake off. */
 @Composable
 fun StayAwakeChip(onTurnOff: () -> Unit, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.onSecondaryContainer
     Row(
         modifier
-            // 32dp to look at, with the usual 48dp to hit.
             .minimumInteractiveComponentSize()
             .height(Sizes.Chip)
             .clip(CircleShape)

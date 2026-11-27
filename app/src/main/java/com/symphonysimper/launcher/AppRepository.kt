@@ -42,7 +42,6 @@ import java.text.Collator
 import java.util.concurrent.ConcurrentHashMap
 
 class App(
-    /** Stable id used in settings and backups: "package/activity". */
     val key: String,
     val component: ComponentName,
     val user: UserHandle,
@@ -52,40 +51,29 @@ class App(
     val pkg: String get() = component.packageName
 }
 
-/** Apps hidden on first run. They exist on every Android phone. */
 private val DEFAULT_HIDDEN = setOf("com.android.vending", "com.android.settings", "com.android.stk")
 
-/** Loads launchable apps and their icons off the main thread and keeps the list current. */
 class AppRepository(private val context: Context, private val prefs: Prefs) {
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val icons = ConcurrentHashMap<String, ImageBitmap>()
-    /** Themed icons' monochrome layers, only for the apps that show them. Changed on the main thread. */
     private val monochromes = mutableStateMapOf<String, ImageBitmap>()
-    /** Apps whose icon has no monochrome layer, so it isn't looked for again. Main thread only. */
     private val noMonochrome = HashSet<String>()
     private var loadJob: Job? = null
 
-    /** Every launchable app, hidden ones included, sorted by label. */
     var all by mutableStateOf<List<App>>(emptyList())
         private set
 
     fun start() {
         launcherApps.registerCallback(callback, Handler(Looper.getMainLooper()))
         reload()
-        // When the dock or the themed icon settings change, load or free just the icons that changed.
         scope.launch(Dispatchers.Main) {
             snapshotFlow { themedKeys() }.drop(1).collectLatest { syncMonochromes(it, all) }
         }
     }
 
-    /**
-     * The icon's monochrome layer as a white mask, for a themed icon, or null if the app has none or
-     * it isn't shown themed. Reading it in composition updates just that icon when it loads.
-     */
     fun monochrome(key: String): ImageBitmap? = monochromes[key]
 
-    /** Keys of the apps shown with themed icons; null means all of them. */
     private fun themedKeys(): Set<String>? = when {
         prefs.themedDrawer -> null
         prefs.themedDock -> prefs.dock.toSet()
@@ -99,7 +87,6 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
         loadJob = scope.launch {
             val list = load()
             withContext(Dispatchers.Main) {
-                // Themed icons first, so the dock never shows the full-colour icons for a frame.
                 syncMonochromes(themedKeys(), list)
                 all = list
                 if (!prefs.initialized) applyDefaults(list)
@@ -128,10 +115,6 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
             .sortedWith { a, b -> collator.compare(a.label, b.label) }
     }
 
-    /**
-     * Makes [monochromes] hold exactly the themed icons shown: frees the rest and renders the missing
-     * ones off the main thread. [themed] is the keys shown themed, or null for every app.
-     */
     private suspend fun syncMonochromes(themed: Set<String>?, apps: List<App>) {
         val wanted = if (themed == null) apps else apps.filter { it.key in themed }
         val keep = wanted.mapTo(HashSet()) { it.key }
@@ -157,7 +140,6 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
         prefs.initialized = true
     }
 
-    /** Phone, messages and camera: whichever apps are the defaults on this phone. */
     private fun defaultDockPackages(): List<String> {
         val camera = context.packageManager
             .resolveActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), PackageManager.MATCH_DEFAULT_ONLY)
@@ -185,7 +167,6 @@ class AppRepository(private val context: Context, private val prefs: Prefs) {
     }
 }
 
-/** Draws every icon as a squircle. Old non-adaptive icons are shrunk onto a white squircle. */
 object IconRenderer {
     fun squircle(size: Float) = Path().apply {
         moveTo(.5f * size, 0f)
@@ -210,21 +191,15 @@ object IconRenderer {
             icon.setBounds(inset, inset, size - inset, size - inset)
             icon.draw(canvas)
         }
-        // Clear everything outside the squircle, anti-aliased.
         val outside = squircle(size.toFloat()).apply { fillType = Path.FillType.INVERSE_WINDING }
         canvas.drawPath(outside, Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) })
         return bitmap.toGpu()
     }
 
-    /**
-     * The icon's monochrome layer as a white mask on transparent, placed like the foreground layer, to be
-     * tinted when drawn. Null if the app doesn't provide one.
-     */
     fun renderMonochrome(icon: Drawable, size: Int): ImageBitmap? {
         val mono = (icon as? AdaptiveIconDrawable)?.monochrome ?: return null
         val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
-        // Layers are 108dp with the middle 72dp showing: a quarter of the icon's size sticks out each side.
         val outset = size / 4
         mono.setBounds(-outset, -outset, size + outset, size + outset)
         mono.draw(canvas)
@@ -232,8 +207,6 @@ object IconRenderer {
         return bitmap.toGpu()
     }
 
-    // Keep only the GPU copy. A normal bitmap lives in app memory and also gets copied to the GPU
-    // to be drawn, so every icon would be held twice.
     private fun Bitmap.toGpu(): ImageBitmap {
         val hardware = copy(Bitmap.Config.HARDWARE, false) ?: return asImageBitmap().also { prepareToDraw() }
         recycle()

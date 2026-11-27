@@ -25,7 +25,6 @@ android {
     }
 }
 
-// Runs on the phone plugged in over adb (Android 13 or newer, no root needed).
 baselineProfile {
     useConnectedDevices = true
 }

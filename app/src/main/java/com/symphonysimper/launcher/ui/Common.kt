@@ -92,18 +92,15 @@ import com.symphonysimper.launcher.open
 import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.ui.theme.Sizes
 
-/** Remembers where an app icon is drawn, so [launch] can grow the app out of it. */
 class LaunchSource(private val view: View) {
     private var icon: LayoutCoordinates? = null
 
-    /** Goes on the icon itself (not its whole cell), as Launcher3 animates from the icon. */
     val modifier = Modifier.onPlaced { icon = it }
 
     private val bounds get() = icon?.takeIf { it.isAttached }?.boundsInRoot()?.run { Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()) }
 
     fun launch(app: App) = view.context.launch(app, view, bounds)
 
-    /** Opens [intent], growing it out of whatever this source's [modifier] is on. */
     fun open(intent: Intent, fallback: Intent? = null) = view.context.open(intent, fallback, view, bounds)
 }
 
@@ -113,12 +110,6 @@ fun rememberLaunchSource(): LaunchSource {
     return remember(view) { LaunchSource(view) }
 }
 
-/**
- * An app's icon. With [badge] on, apps with notifications get a dot at the top end in the theme's
- * primary colour, with a thin notch cut into the icon around it so it reads on any background.
- * [iconModifier] goes on the icon under the dot (e.g. a squircle clip and click), so clipping the
- * icon never clips the dot.
- */
 @Composable
 fun AppIcon(
     app: App,
@@ -147,7 +138,6 @@ fun AppIcon(
                 if (dot) drawCircle(Color.Black, (DotRadius + DotGap) * this.size.width, dotCenter(), blendMode = BlendMode.Clear)
             }
         if (mono != null) {
-            // Pixel's themed icon colours, from the wallpaper.
             val dark = isSystemInDarkTheme()
             val background = colorResource(if (dark) android.R.color.system_neutral1_800 else android.R.color.system_accent1_100)
             val foreground = colorResource(if (dark) android.R.color.system_accent1_100 else android.R.color.system_neutral2_700)
@@ -163,8 +153,6 @@ fun AppIcon(
     }
 }
 
-// Fractions of the icon's width, so the dot scales with it: 14dp across with a 2.5dp notch on a 56dp
-// icon. It sits over the squircle's corner but inside the icon's bounds, where nothing can clip it.
 private const val DotRadius = 0.125f
 private const val DotGap = 0.045f
 
@@ -173,15 +161,12 @@ private fun DrawScope.dotCenter() = Offset(size.width * (1 - DotRadius), size.he
 @Composable
 fun keyboardOpen(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-/** Gap under the launcher's search bar: room above the gesture bar, less when the keyboard is up. */
 @Composable
 fun searchBarBottom(): Dp = if (keyboardOpen()) 10.dp else 24.dp
 
-/** Height the launcher's bottom search bar takes up, so home and drawer content stay clear of it. */
 @Composable
 fun searchBarSpace(): Dp = 10.dp + Sizes.Control + searchBarBottom()
 
-/** Pill search field used in the launcher and in app lists. */
 @Composable
 fun SearchField(
     value: String,
@@ -229,16 +214,13 @@ fun SearchField(
     )
 }
 
-/** Material 3 Expressive menu: one rounded group in a popup, as in the mockup. */
 class MenuEntry(val icon: ImageVector, val text: String, val onClick: () -> Unit)
 
 private val MenuMinWidth = 200.dp
 
-/** Space between a menu's pill and its group, wider than the group's own gaps so it reads as separate. */
 private val PillGap = 8.dp
 private val ArrowSize = DpSize(22.dp, 10.dp)
 
-/** Places the menu above its anchor (below when there's no room), lined up like Launcher3's popups. */
 private class MenuPosition(val inset: Int, val gap: Int, val margin: Int, val top: Int) : PopupPositionProvider {
     var below by mutableStateOf(false)
     var arrowX by mutableIntStateOf(0)
@@ -255,10 +237,6 @@ private class MenuPosition(val inset: Int, val gap: Int, val margin: Int, val to
     }
 }
 
-/**
- * Split shape used across the launcher (menus, search results): big outer corners on the edges
- * of a group, small inner corners where pieces meet.
- */
 fun splitShape(top: Boolean = true, bottom: Boolean = true, start: Boolean = true, end: Boolean = true): Shape {
     val big = 24.dp
     val small = 4.dp
@@ -272,11 +250,6 @@ fun splitShape(top: Boolean = true, bottom: Boolean = true, start: Boolean = tru
 
 val SplitGap = 2.dp
 
-/**
- * Lawnchair-style long-press menu, anchored to the composable it's placed in. [arrow] points at the
- * anchor. A [pill] is a quick toggle on its own fully rounded button on the group's side nearest the
- * anchor, filled with the primary colour while [pillOn].
- */
 @Composable
 fun LauncherMenu(
     entries: List<MenuEntry>,
@@ -290,7 +263,7 @@ fun LauncherMenu(
     val position = remember(arrow, statusBar) {
         with(density) {
             MenuPosition(
-                inset = 40.dp.roundToPx(), // keeps the arrow clear of the card's rounded corner
+                inset = 40.dp.roundToPx(),
                 gap = (if (arrow) 2.dp else 32.dp).roundToPx(),
                 margin = 8.dp.roundToPx(),
                 top = statusBar + 8.dp.roundToPx(),
@@ -314,15 +287,12 @@ fun LauncherMenu(
                 },
             verticalArrangement = Arrangement.spacedBy(SplitGap),
         ) {
-            // The pill sits on the side nearest the finger: under the group when the menu opens above
-            // the anchor, over it when there's no room and it opens below.
             if (pill != null && position.below) {
                 MenuPill(pill, pillOn, color, true.takeIf { arrow }, position.arrowX, onDismiss)
                 Spacer(Modifier.height(PillGap - SplitGap * 2))
             }
             entries.forEachIndexed { i, entry ->
                 val shape = splitShape(top = i == 0, bottom = i == entries.lastIndex)
-                // The arrow grows out of the card nearest the anchor, which is the pill when there is one.
                 val arrowUp = when {
                     !arrow || pill != null -> null
                     position.below -> true.takeIf { i == 0 }
@@ -338,7 +308,6 @@ fun LauncherMenu(
     }
 }
 
-/** A menu's quick toggle: a fully rounded card, filled with the primary colour while [on]. */
 @Composable
 private fun MenuPill(entry: MenuEntry, on: Boolean, color: Color, arrowUp: Boolean?, arrowX: Int, onDismiss: () -> Unit) {
     val colors = MaterialTheme.colorScheme
@@ -347,7 +316,6 @@ private fun MenuPill(entry: MenuEntry, on: Boolean, color: Color, arrowUp: Boole
     }
 }
 
-/** A menu group; with [arrowUp] set, an arrow at [arrowX] sticks out of its top (true) or bottom (false). */
 @Composable
 private fun MenuCard(shape: Shape, color: Color, arrowUp: Boolean?, arrowX: Int, content: @Composable ColumnScope.() -> Unit) {
     val outline = if (arrowUp == null) shape else remember(shape, arrowUp, arrowX) { ArrowShape(shape, arrowX.toFloat(), arrowUp) }
@@ -355,20 +323,16 @@ private fun MenuCard(shape: Shape, color: Color, arrowUp: Boolean?, arrowX: Int,
     Column(Modifier.fillMaxWidth().shadow(3.dp, outline).background(color, outline).clip(outline).padding(room), content = content)
 }
 
-/**
- * [base] with a triangle joined onto its top ([up]) or bottom edge, centred at [arrowX]. One outline,
- * so the arrow shares the card's shadow and there's no seam between them.
- */
 private class ArrowShape(private val base: Shape, private val arrowX: Float, private val up: Boolean) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val w = with(density) { ArrowSize.width.toPx() } / 2
         val h = with(density) { ArrowSize.height.toPx() }
-        val fillet = with(density) { 4.dp.toPx() } // curve where the arrow meets the card
+        val fillet = with(density) { 4.dp.toPx() }
         val body = Path().apply {
             addOutline(base.createOutline(Size(size.width, size.height - h), layoutDirection, density))
             if (up) translate(Offset(0f, h))
         }
-        val out = if (up) -1f else 1f // direction the tip points
+        val out = if (up) -1f else 1f
         val edge = if (up) h else size.height - h
         val tip = Offset(arrowX, edge + out * h)
         val left = Offset(arrowX - w, edge)
@@ -376,13 +340,11 @@ private class ArrowShape(private val base: Shape, private val arrowX: Float, pri
         fun Offset.towards(to: Offset, t: Float) = this + (to - this) * t
         val arrow = Path().apply {
             moveTo(left.x - fillet, edge)
-            // Soft shoulders and a rounded tip: each corner becomes a curve through it.
             left.towards(tip, 0.35f).let { quadraticTo(left.x, left.y, it.x, it.y) }
             tip.towards(left, 0.35f).let { lineTo(it.x, it.y) }
             tip.towards(right, 0.35f).let { quadraticTo(tip.x, tip.y, it.x, it.y) }
             right.towards(tip, 0.35f).let { lineTo(it.x, it.y) }
             quadraticTo(right.x, right.y, right.x + fillet, edge)
-            // Back through the card's edge so the two pieces overlap with no seam.
             lineTo(right.x + fillet, edge - out * fillet)
             lineTo(left.x - fillet, edge - out * fillet)
             close()
@@ -396,7 +358,6 @@ private fun MenuRow(
     entry: MenuEntry,
     onDismiss: () -> Unit,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    /** Set for a pill: read out as a switch that's on or off. */
     toggle: Boolean? = null,
 ) {
     val onClick = { onDismiss(); entry.onClick() }
