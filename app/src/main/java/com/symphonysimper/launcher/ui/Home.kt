@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -40,6 +39,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.expandNotifications
 import com.symphonysimper.launcher.ui.theme.Sizes
@@ -125,7 +125,9 @@ fun Home(
 private fun Clock(modifier: Modifier) {
     val context = LocalContext.current
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    DisposableEffect(Unit) {
+    // Listens only while home is on screen: once a minute, and never while another app is open.
+    // Coming back catches up straight away.
+    LifecycleStartEffect(Unit) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context, i: Intent) {
                 now = System.currentTimeMillis()
@@ -138,7 +140,7 @@ private fun Clock(modifier: Modifier) {
         }
         context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         now = System.currentTimeMillis()
-        onDispose { context.unregisterReceiver(receiver) }
+        onStopOrDispose { context.unregisterReceiver(receiver) }
     }
     val locale = Locale.getDefault()
     val is24 = DateFormat.is24HourFormat(context)

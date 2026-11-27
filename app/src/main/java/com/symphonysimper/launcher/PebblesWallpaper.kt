@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import java.io.File
+import kotlin.math.ceil
 import kotlin.math.max
 
 /**
@@ -76,8 +77,10 @@ class PebblesWallpaper : WallpaperService() {
         /** Material You builds the system colours from these: the photo's own, or the Pebbles palette. */
         override fun onComputeColors(): WallpaperColors {
             val dark = isDark(this@PebblesWallpaper)
-            val image = if (prefs.wallpaperImages) photoFor(dark) else null
-            return image?.let(WallpaperColors::fromBitmap) ?: Pebbles.colors(dark)
+            if (!prefs.wallpaperImages) return Pebbles.colors(dark)
+            // The photo shown is a GPU-only bitmap that can't be read back, so read a small copy instead.
+            val small = decodeSampled(photoFile(dark), COLOR_SAMPLE, COLOR_SAMPLE) ?: return Pebbles.colors(dark)
+            return WallpaperColors.fromBitmap(small).also { small.recycle() }
         }
 
         fun draw() {
@@ -101,14 +104,20 @@ class PebblesWallpaper : WallpaperService() {
 
         private fun photoFor(dark: Boolean): Bitmap? {
             if (width == 0 || height == 0) return null
-            val file = wallpaperFile(this@PebblesWallpaper, dark && !prefs.sameImage)
+            val file = photoFile(dark)
             val key = "${file.name}:${prefs.wallpaperVersion}:$width"
             if (key == photoKey) return photo
             photo?.recycle()
-            photo = decodeSampled(file, width, height)
+            // Keep only the GPU copy: a screen-sized photo is about 10 MB, and drawing it would hold a
+            // second copy on the GPU anyway.
+            photo = decodeSampled(file, width, height)?.let { decoded ->
+                decoded.copy(Bitmap.Config.HARDWARE, false)?.also { decoded.recycle() } ?: decoded
+            }
             photoKey = key
             return photo
         }
+
+        private fun photoFile(dark: Boolean) = wallpaperFile(this@PebblesWallpaper, dark && !prefs.sameImage)
 
         private fun drawCentreCrop(canvas: Canvas, image: Bitmap) {
             val scale = max(width / image.width.toFloat(), height / image.height.toFloat())
@@ -138,14 +147,24 @@ class PebblesWallpaper : WallpaperService() {
         fun wallpaperFile(context: Context, dark: Boolean) =
             File(context.filesDir, if (dark) "wallpaper_dark" else "wallpaper_light")
 
-        /** Decodes [file] no larger than needed to cover [w]x[h]. */
+        /** Longest side of the copy Material You reads a photo's colours from. */
+        private const val COLOR_SAMPLE = 128
+
+        /** Decodes [file] scaled to just cover [w]x[h], never larger. */
         fun decodeSampled(file: File, w: Int, h: Int): Bitmap? {
             if (!file.exists()) return null
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.path, bounds)
+            // Halving while decoding is cheap but can leave it up to twice too big each way (four times
+            // the memory), so scale the rest of the way after.
             var sample = 1
             while (bounds.outWidth / (sample * 2) >= w && bounds.outHeight / (sample * 2) >= h) sample *= 2
-            return BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+            val decoded = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
+            val scale = max(w / decoded.width.toFloat(), h / decoded.height.toFloat())
+            if (scale >= 1f) return decoded
+            val scaled = Bitmap.createScaledBitmap(decoded, ceil(decoded.width * scale).toInt(), ceil(decoded.height * scale).toInt(), true)
+            if (scaled !== decoded) decoded.recycle()
+            return scaled
         }
     }
 }

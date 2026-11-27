@@ -5,6 +5,23 @@
 Before changing anything visible, read [DESIGN.md](DESIGN.md): colours, sizes, shapes, components and
 motion the launcher already uses. Follow it, and add to it when you settle a new pattern.
 
+## Performance
+
+Speed, memory and battery come first, with no trade-offs on any of them. Every change keeps the
+launcher fast, lean and idle when nothing is happening:
+
+- **Nothing runs off screen.** Listeners, receivers and timers are tied to the lifecycle
+  (`LifecycleStartEffect`), not just to composition, so they stop while another app is open. No
+  polling; react to system events.
+- **Animate in the draw phase.** Values that change every frame are read only inside `graphicsLayer`
+  or draw lambdas, never during composition.
+- **Bitmaps are GPU-only** (`Bitmap.Config.HARDWARE`) unless their pixels must be read, and decoded no
+  larger than they're shown.
+- **Prove it on the release build** (`./gradlew -q :app:installRelease`): compare `dumpsys meminfo`
+  and `dumpsys gfxinfo` before and after anything that might cost memory or frames.
+- Don't use `setFixedSize` on the wallpaper surface: wallpapers must size from layout, and the crash
+  resets the user's wallpaper and default home app.
+
 ## Commit messages
 
 Use the format `<scope>: <message>`.

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -159,7 +160,11 @@ object IconRenderer {
         // Clear everything outside the squircle, anti-aliased.
         val outside = squircle(size.toFloat()).apply { fillType = Path.FillType.INVERSE_WINDING }
         canvas.drawPath(outside, Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) })
-        return bitmap.asImageBitmap().also { bitmap.prepareToDraw() }
+        // Keep only the GPU copy. A normal bitmap lives in app memory and also gets copied to the GPU
+        // to be drawn, so every icon would be held twice.
+        val hardware = bitmap.copy(Bitmap.Config.HARDWARE, false) ?: return bitmap.asImageBitmap().also { bitmap.prepareToDraw() }
+        bitmap.recycle()
+        return hardware.asImageBitmap()
     }
 
     private const val LEGACY_INSET = 0.17f
