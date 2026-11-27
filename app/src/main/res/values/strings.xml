@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">launcher</string>
+    <string name="app_name">Launcher</string>
+    <string name="settings_label">Launcher settings</string>
+    <string name="wallpaper_label">Pebbles</string>
+    <string name="tile_label">Stay awake</string>
+    <string name="badges_label">Launcher notification badges</string>
 </resources>
