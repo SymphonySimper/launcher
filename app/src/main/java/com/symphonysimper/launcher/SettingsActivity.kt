@@ -311,6 +311,12 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
         .isNotificationListenerAccessGranted(ComponentName(context, BadgeService::class.java))
     val contactsAccess = context.hasContactsPermission()
 
+    // The role dialog needs to know who is asking, which it only learns when started for a result.
+    // If it's dismissed or Android won't show it (after two refusals), open the system's home app picker.
+    val askHome = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val role = context.getSystemService(RoleManager::class.java)
+        if (!role.isRoleHeld(RoleManager.ROLE_HOME)) context.start(Intent(Settings.ACTION_HOME_SETTINGS))
+    }
     val askContacts = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         prefs.contacts = it[Manifest.permission.READ_CONTACTS] == true
     }
@@ -332,8 +338,7 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
             if (!isDefault) {
                 Group {
                     NavRow(0, 1, Ic.home, "Set as default launcher") {
-                        val role = context.getSystemService(RoleManager::class.java)
-                        context.start(role.createRequestRoleIntent(RoleManager.ROLE_HOME))
+                        askHome.launch(context.getSystemService(RoleManager::class.java).createRequestRoleIntent(RoleManager.ROLE_HOME))
                     }
                 }
                 Spacer(Modifier.height(12.dp))
