@@ -65,8 +65,7 @@ is missing, add a token there.
 | `Control` | 56dp | Buttons, toggles, menu rows, the search field. |
 | `ControlLarge` | 64dp | Search result rows and controls floating over content. |
 | `Icon` | 24dp | Icons. |
-| `AppIcon` | 56dp | App icons in the dock (40dp inside settings rows). |
-| `DrawerIcon` | 60dp | App icons in the drawer. Icons are rendered at this size. |
+| `AppIcon` | 60dp | App icons in the dock and the drawer, the same size in both so nothing jumps when the drawer opens (40dp inside settings rows). Icons are rendered at this size. |
 | `ThumbLift` | 40dp | Extra space under bottom floating controls, above the gesture bar. |
 
 The drawer is roomy, matched to Lawnchair's: 60dp icons, a 10dp gap to the label, 8dp padding inside
