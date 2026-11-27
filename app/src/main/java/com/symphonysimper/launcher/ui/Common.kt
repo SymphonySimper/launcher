@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.symphonysimper.launcher.App
 import com.symphonysimper.launcher.LauncherApp
+import com.symphonysimper.launcher.ui.theme.isDark
 
 @Composable
 fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier) {
@@ -107,11 +108,14 @@ fun SearchField(
 /** Material 3 Expressive menu: one rounded group in a popup, as in the mockup. */
 @Composable
 fun ExpressiveMenu(expanded: Boolean, onDismissRequest: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(28.dp)
     DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismissRequest) {
         DropdownMenuGroup(
-            shapes = MenuDefaults.groupShape(0, 1),
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentPadding = PaddingValues(6.dp),
+            shapes = MenuDefaults.groupShapes(shape, shape),
+            containerColor = if (colors.isDark) colors.surfaceContainerHighest else colors.surfaceBright,
+            shadowElevation = 8.dp,
+            contentPadding = PaddingValues(8.dp),
             content = content,
         )
     }
@@ -121,15 +125,19 @@ fun ExpressiveMenu(expanded: Boolean, onDismissRequest: () -> Unit, content: @Co
 fun MenuItem(icon: ImageVector, text: String, onClick: () -> Unit) {
     Row(
         Modifier
-            .widthIn(min = 176.dp)
-            .height(50.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .widthIn(min = 208.dp)
+            .height(56.dp)
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp),
+            .padding(start = 8.dp, end = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        val colors = MaterialTheme.colorScheme
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(if (colors.isDark) colors.primaryContainer else colors.secondaryContainer),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, Modifier.size(20.dp), tint = colors.onSurface) }
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
     }
 }

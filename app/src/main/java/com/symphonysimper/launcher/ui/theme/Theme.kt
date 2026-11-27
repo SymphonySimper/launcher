@@ -91,8 +91,11 @@ private val MonoDark = darkColorScheme(
 )
 
 /** Settings pages: grey page with white rows in light, near-black page with dark grey rows in dark. */
+val ColorScheme.isDark: Boolean
+    get() = this === MonoDark
+
 val ColorScheme.pageBackground: Color
-    get() = if (this === MonoDark) surface else surfaceContainer
+    get() = if (isDark) surface else surfaceContainer
 
 // Material's title and label styles use weight 500, which the system font on
 // some phones (Motorola's, for one) draws close to bold. Keep everything regular.
