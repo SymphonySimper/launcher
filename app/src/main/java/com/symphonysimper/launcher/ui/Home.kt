@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.symphonysimper.launcher.App
-import com.symphonysimper.launcher.launch
 import com.symphonysimper.launcher.ui.theme.Sizes
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -53,7 +52,6 @@ fun Home(
     onSystemSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     var menuAt by remember { mutableStateOf<Offset?>(null) }
     Box(
         modifier
@@ -74,9 +72,10 @@ fun Home(
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
                 dock.forEach { app ->
+                    val source = rememberLaunchSource()
                     AppIcon(
                         app, Sizes.AppIcon,
-                        Modifier.clip(SquircleShape).combinedClickable(onClick = { context.launch(app) }),
+                        Modifier.then(source.modifier).clip(SquircleShape).combinedClickable(onClick = { source.launch(app) }),
                     )
                 }
             }

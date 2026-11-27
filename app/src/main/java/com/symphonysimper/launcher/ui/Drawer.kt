@@ -61,7 +61,6 @@ import com.symphonysimper.launcher.ENGINES
 import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.appInfo
 import com.symphonysimper.launcher.call
-import com.symphonysimper.launcher.launch
 import com.symphonysimper.launcher.openContact
 import com.symphonysimper.launcher.playStoreSearch
 import com.symphonysimper.launcher.searchContacts
@@ -246,6 +245,7 @@ private fun WebRow(query: String, highlight: Boolean) {
 @Composable
 private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean = false) {
     val context = LocalContext.current
+    val source = rememberLaunchSource()
     var menu by remember { mutableStateOf(false) }
     Box(modifier) {
         Column(
@@ -253,11 +253,11 @@ private fun AppCell(app: App, modifier: Modifier = Modifier, highlight: Boolean 
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(if (highlight) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                .combinedClickable(onClick = { context.launch(app) }, onLongClick = { menu = true })
+                .combinedClickable(onClick = { source.launch(app) }, onLongClick = { menu = true })
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppIcon(app, Sizes.AppIcon)
+            AppIcon(app, Sizes.AppIcon, source.modifier)
             Spacer(Modifier.height(8.dp))
             Text(
                 app.label,

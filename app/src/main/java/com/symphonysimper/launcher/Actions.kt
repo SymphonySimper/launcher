@@ -1,6 +1,10 @@
 package com.symphonysimper.launcher
 
 import android.Manifest
+import android.app.ActivityOptions
+import android.graphics.Rect
+import android.os.Bundle
+import android.view.View
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.ContentUris
@@ -38,9 +42,20 @@ fun Context.start(intent: Intent) {
     }
 }
 
-fun Context.launch(app: App) {
+/**
+ * Opens [app]. Given the icon's [bounds] within [view], the app grows out of the icon as it does in
+ * Launcher3, which also makes the launch feel quicker.
+ */
+fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
+    var options: Bundle? = null
+    var source: Rect? = null
+    if (view != null && bounds != null) {
+        options = ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height()).toBundle()
+        val origin = IntArray(2).also(view::getLocationOnScreen)
+        source = Rect(bounds).apply { offset(origin[0], origin[1]) }
+    }
     try {
-        getSystemService(LauncherApps::class.java).startMainActivity(app.component, app.user, null, null)
+        getSystemService(LauncherApps::class.java).startMainActivity(app.component, app.user, source, options)
     } catch (_: Exception) {
         toast("Can't open ${app.label}")
     }

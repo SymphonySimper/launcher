@@ -65,9 +65,35 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.graphics.Rect
+import android.view.View
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalView
 import com.symphonysimper.launcher.App
+import com.symphonysimper.launcher.launch
 import com.symphonysimper.launcher.LauncherApp
 import com.symphonysimper.launcher.ui.theme.Sizes
+
+/** Remembers where an app icon is drawn, so [launch] can grow the app out of it. */
+class LaunchSource(private val view: View) {
+    private var icon: LayoutCoordinates? = null
+
+    /** Goes on the icon itself (not its whole cell), as Launcher3 animates from the icon. */
+    val modifier = Modifier.onPlaced { icon = it }
+
+    fun launch(app: App) {
+        val bounds = icon?.takeIf { it.isAttached }?.boundsInRoot()
+        view.context.launch(app, view, bounds?.run { Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()) })
+    }
+}
+
+@Composable
+fun rememberLaunchSource(): LaunchSource {
+    val view = LocalView.current
+    return remember(view) { LaunchSource(view) }
+}
 
 @Composable
 fun AppIcon(app: App, size: Dp, modifier: Modifier = Modifier) {
