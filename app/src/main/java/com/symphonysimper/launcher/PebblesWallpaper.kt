@@ -8,11 +8,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.HardwareRenderer
 import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.RenderNode
 import android.graphics.Shader
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
@@ -41,6 +43,8 @@ class PebblesWallpaper : WallpaperService() {
         private var photoKey: String? = null
         private var shownKey: String? = null
         private var drawnFrame: String? = null
+        private val content = RenderNode("wallpaper")
+        private var renderer: HardwareRenderer? = null
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
@@ -54,6 +58,7 @@ class PebblesWallpaper : WallpaperService() {
             engines -= this
             if (!isPreview) liveEngines--
             prefs.sp.unregisterOnSharedPreferenceChangeListener(this)
+            release()
             photo?.recycle()
             super.onDestroy()
         }
@@ -68,6 +73,11 @@ class PebblesWallpaper : WallpaperService() {
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             super.onSurfaceCreated(holder)
             drawnFrame = null
+        }
+
+        override fun onSurfaceDestroyed(holder: SurfaceHolder) {
+            release()
+            super.onSurfaceDestroyed(holder)
         }
 
         override fun onSurfaceRedrawNeeded(holder: SurfaceHolder) = draw()
@@ -89,21 +99,39 @@ class PebblesWallpaper : WallpaperService() {
             val image = if (prefs.wallpaperImages) photoFor(dark) else null
             val shown = "$dark:${if (image != null) photoKey else "pebbles"}"
             val frame = "$width:$height:$shown"
-            // The system asks for several redraws of an unchanged surface while it sets the wallpaper up,
-            // and each post made while the last is still queued takes another screen-sized buffer.
+            // The system asks for several redraws of an unchanged surface while it sets the wallpaper up.
             if (frame == drawnFrame) return
-            val holder = surfaceHolder
-            val canvas = try { holder.lockHardwareCanvas() } catch (_: Exception) { null } ?: return
+            val surface = surfaceHolder.surface
+            if (!surface.isValid) return
+            release()
+            content.setPosition(0, 0, width, height)
+            val canvas = content.beginRecording()
             try {
                 if (image != null) drawCentreCrop(canvas, image) else Pebbles.draw(canvas, width.toFloat(), height.toFloat(), dark)
             } finally {
-                holder.unlockCanvasAndPost(canvas)
+                content.endRecording()
             }
+            // A surface keeps every buffer it has allocated, a screen's worth each, until it's disconnected,
+            // so the renderer that connects it lives only until its frame is committed. Destroying it any
+            // sooner drops the frame, and so does waiting for present.
+            val renderer = HardwareRenderer().also { this.renderer = it }
+            renderer.setContentRoot(content)
+            renderer.setSurface(surface)
+            renderer.createRenderRequest()
+                .setVsyncTime(System.nanoTime())
+                .setFrameCommitCallback(mainExecutor) { if (this.renderer === renderer) release() }
+                .syncAndDraw()
             drawnFrame = frame
             if (shown != shownKey) {
                 shownKey = shown
                 notifyColorsChanged()
             }
+        }
+
+        private fun release() {
+            renderer?.destroy()
+            renderer = null
+            content.discardDisplayList()
         }
 
         private fun photoFor(dark: Boolean): Bitmap? {
