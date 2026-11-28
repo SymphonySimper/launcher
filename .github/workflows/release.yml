@@ -41,7 +41,7 @@ jobs:
         with:
           cache-read-only: true
 
-      - name: Build signed APK
+      - name: Build signed APK and app bundle
         if: env.HAS_KEY == 'true'
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
@@ -51,7 +51,7 @@ jobs:
         run: |
           export SIGNING_KEYSTORE="$RUNNER_TEMP/release.jks"
           echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$SIGNING_KEYSTORE"
-          ./gradlew --no-daemon :app:assembleRelease
+          ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease
           rm "$SIGNING_KEYSTORE"
 
       - name: Publish release
@@ -63,4 +63,5 @@ jobs:
           version=$(jq -r '.elements[0].versionName' "$out/output-metadata.json")
           apk="launcher-$version.apk"
           cp "$out/$(jq -r '.elements[0].outputFile' "$out/output-metadata.json")" "$apk"
-          gh release create "v$version" "$apk" --target "$GITHUB_SHA" --title "Launcher $version" --generate-notes
+          cp app/build/outputs/bundle/release/app-release.aab "launcher-$version.aab"
+          gh release create "v$version" "$apk" "launcher-$version.aab" --target "$GITHUB_SHA" --title "Launcher $version" --generate-notes
