@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -68,7 +69,6 @@ fun Home(
     drawer: DrawerState,
     onLauncherSettings: () -> Unit,
     onSystemSettings: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     var menuAt by remember { mutableStateOf<Offset?>(null) }
     val context = LocalContext.current
@@ -85,7 +85,7 @@ fun Home(
     }
     val stayAwake = rememberStayAwake()
     Box(
-        modifier
+        Modifier
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures(onLongPress = { menuAt = it }) }
             .draggable(
@@ -106,55 +106,69 @@ fun Home(
                 onDragStopped = { drawer.release(it) },
             ),
     ) {
-        Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            Clock(Modifier.padding(start = ClockStart - ClockTapPadding, top = 36.dp))
-            AnimatedVisibility(
-                stayAwake.on,
-                enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
-                    expandVertically(MaterialTheme.motionScheme.fastSpatialSpec(), expandFrom = Alignment.Top),
-                exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
-                    shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top),
-            ) {
-                StayAwakeChip(onTurnOff = { stayAwake.set(false) }, Modifier.padding(start = ClockStart + DateIndent))
+        Box(
+            Modifier.fillMaxSize().graphicsLayer {
+                val p = drawer.progress
+                translationY = -HomeLift.toPx() * p
+                scaleX = 1f - HomeShrink * p
+                scaleY = scaleX
+                // The open drawer covers home, and a layer at zero alpha isn't drawn at all.
+                alpha = if (p < 1f) 1f else 0f
+            },
+        ) {
+            Column(Modifier.fillMaxSize().systemBarsPadding()) {
+                Clock(Modifier.padding(start = ClockStart - ClockTapPadding, top = 36.dp))
+                AnimatedVisibility(
+                    stayAwake.on,
+                    enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                        expandVertically(MaterialTheme.motionScheme.fastSpatialSpec(), expandFrom = Alignment.Top),
+                    exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                        shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top),
+                ) {
+                    StayAwakeChip(onTurnOff = { stayAwake.set(false) }, Modifier.padding(start = ClockStart + DateIndent))
+                }
+                Spacer(Modifier.weight(1f))
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                ) {
+                    dock.forEach { app ->
+                        val source = rememberLaunchSource()
+                        AppIcon(
+                            app, Sizes.AppIcon, source.modifier,
+                            iconModifier = Modifier.clip(SquircleShape).clickable { source.launch(app) },
+                            badge = true,
+                            themed = LauncherApp.instance.prefs.themedDock,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(18.dp + searchBarSpace()))
             }
-            Spacer(Modifier.weight(1f))
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-            ) {
-                dock.forEach { app ->
-                    val source = rememberLaunchSource()
-                    AppIcon(
-                        app, Sizes.AppIcon, source.modifier,
-                        iconModifier = Modifier.clip(SquircleShape).clickable { source.launch(app) },
-                        badge = true,
-                        themed = LauncherApp.instance.prefs.themedDock,
+
+            menuAt?.let { at ->
+                Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
+                    LauncherMenu(
+                        listOf(
+                            MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
+                            MenuEntry(Ic.settings, "System settings", onSystemSettings),
+                        ),
+                        arrow = false,
+                        onDismiss = { menuAt = null },
+                        pill = MenuEntry(if (stayAwake.on) Ic.coffee else Ic.coffeeOutline, "Stay awake") {
+                            stayAwake.set(!stayAwake.on)
+                        },
+                        pillOn = stayAwake.on,
                     )
                 }
-            }
-            Spacer(Modifier.height(18.dp + searchBarSpace()))
-        }
-
-        menuAt?.let { at ->
-            Box(Modifier.offset { IntOffset(at.x.roundToInt(), at.y.roundToInt()) }) {
-                LauncherMenu(
-                    listOf(
-                        MenuEntry(Ic.tune, "Launcher settings", onLauncherSettings),
-                        MenuEntry(Ic.settings, "System settings", onSystemSettings),
-                    ),
-                    arrow = false,
-                    onDismiss = { menuAt = null },
-                    pill = MenuEntry(if (stayAwake.on) Ic.coffee else Ic.coffeeOutline, "Stay awake") {
-                        stayAwake.set(!stayAwake.on)
-                    },
-                    pillOn = stayAwake.on,
-                )
             }
         }
     }
 }
 
 private val ShadeOpenTimeout = 1.seconds
+
+private val HomeLift = 40.dp
+private const val HomeShrink = 0.04f
 
 private val ClockStart = 26.dp
 

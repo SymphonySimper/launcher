@@ -103,9 +103,6 @@ class MainActivity : ComponentActivity() {
     )
 }
 
-private val HomeLift = 40.dp
-private const val HomeShrink = 0.04f
-
 private const val ScrimAlpha = 0.28f
 
 private val SheetCorner = 28.dp
@@ -156,14 +153,6 @@ private fun LauncherRoot(resetSignal: Int) {
                 context.startWithPlainSplash(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
             },
             onSystemSettings = { context.openSystemSettings() },
-            modifier = Modifier.graphicsLayer {
-                val p = drawer.progress
-                translationY = -HomeLift.toPx() * p
-                scaleX = 1f - HomeShrink * p
-                scaleY = scaleX
-                // The open drawer covers home, and a layer at zero alpha isn't drawn at all.
-                alpha = if (p < 1f) 1f else 0f
-            },
         )
         Box(
             Modifier.fillMaxSize().drawBehind {
