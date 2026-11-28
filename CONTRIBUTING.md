@@ -25,5 +25,5 @@ build fails on a shallow clone (`git fetch --unshallow` fixes it). Signing uses 
 at the top of [release.yml](.github/workflows/release.yml).
 
 The Build workflow only runs when started by hand (Actions → Build → Run workflow, or
-`gh workflow run build.yml`). It builds a release APK signed with a debug key (no secrets) and keeps it as a workflow
-artifact for 7 days; it doesn't publish anything.
+`gh workflow run build.yml`). It builds a release APK signed with the debug key, since it has no
+secrets, and keeps it as a workflow artifact for 7 days. It doesn't publish anything.
