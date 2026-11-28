@@ -97,7 +97,7 @@ Buttons use Material's expressive press shapes so they squish when pressed: pass
 The user describes UI with these names:
 
 - **Split button** ("split thingy"): pieces joined by a 2dp gap, round on the outside and 4dp where
-  they meet. The search result rows (contact | WhatsApp | Call, Play Store | web search) are the
+  they meet. The search result rows (contact | WhatsApp | Call, web search | Play Store) are the
   reference.
 - **Connected button group**: toggles inside one pill, the selected one filled with
   `secondaryContainer`. A whole group can be the leading part of a split button, e.g. the wallpaper
@@ -137,7 +137,8 @@ covers both with no seam.
   (`searchBarBottom()`).
 - **Results grow upwards.** Order from the top: web search, contacts, then apps nearest the thumb.
   Contacts run best match last, so the best one sits nearest the thumb. The best match is
-  highlighted with `secondaryContainer`, because Enter opens it.
+  highlighted with `secondaryContainer`, because Enter opens it. When nothing else matches, only the
+  web search piece lights up, not Play Store beside it, since Enter searches the web.
 - **Muscle memory.** Things stay in the same place: Call is always the last piece of a contact row,
   even when WhatsApp is missing.
 - **Floating controls** (wallpaper page): top row under the status bar, bottom row lifted by

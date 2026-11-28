@@ -218,10 +218,7 @@ private fun WebRow(query: String, highlight: Boolean) {
     val store = rememberAppIcon("com.android.vending")
     val playStore = prefs.playStore
     Row(Modifier.fillMaxWidth().height(Sizes.ControlLarge), horizontalArrangement = Arrangement.spacedBy(SplitGap)) {
-        if (playStore) {
-            IconSegment(splitShape(end = false), highlight, store, Ic.play, "Search Play Store") { context.playStoreSearch(query) }
-        }
-        Segment(splitShape(start = !playStore), onClick = { context.webSearch(query) }, Modifier.weight(1f), highlight) {
+        Segment(splitShape(end = !playStore), onClick = { context.webSearch(query) }, Modifier.weight(1f), highlight) {
             ResultIcon(browser, Ic.globe, null)
             Text(
                 ENGINES[prefs.engine]?.first?.let { "Search $it" } ?: "Search the web",
@@ -230,6 +227,9 @@ private fun WebRow(query: String, highlight: Boolean) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (playStore) {
+            IconSegment(splitShape(start = false), highlight = false, store, Ic.play, "Search Play Store") { context.playStoreSearch(query) }
         }
     }
 }
