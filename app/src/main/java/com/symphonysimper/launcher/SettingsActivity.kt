@@ -623,6 +623,7 @@ private fun EnginePage(onBack: () -> Unit) {
                     leadingContent = { RadioButton(selected = prefs.engine == key, onClick = null) },
                     supportingContent = if (key == "custom") {
                         {
+                            val problem = prefs.customUrl.takeIf { it.isNotBlank() }?.let(::searchUrlProblem)
                             OutlinedTextField(
                                 value = prefs.customUrl,
                                 onValueChange = {
@@ -630,6 +631,8 @@ private fun EnginePage(onBack: () -> Unit) {
                                     if (it.isNotBlank()) prefs.engine = "custom"
                                 },
                                 placeholder = { Text("https://…?q=%s") },
+                                isError = problem != null,
+                                supportingText = problem?.let { { Text(it.message) } },
                                 singleLine = true,
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

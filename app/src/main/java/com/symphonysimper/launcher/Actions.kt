@@ -94,11 +94,25 @@ fun Context.appInfo(app: App) =
 
 private fun encode(query: String) = URLEncoder.encode(query.trim(), "UTF-8")
 
+enum class SearchUrlProblem(val message: String) {
+    NoPlaceholder("Put %s where the search words go"),
+    NotWeb("Start with https://"),
+}
+
+fun searchUrlProblem(template: String): SearchUrlProblem? {
+    val uri = template.toUri()
+    return when {
+        "%s" !in template -> SearchUrlProblem.NoPlaceholder
+        uri.scheme !in setOf("http", "https") || uri.host.isNullOrBlank() -> SearchUrlProblem.NotWeb
+        else -> null
+    }
+}
+
 fun Context.webSearch(query: String) {
     val prefs = LauncherApp.instance.prefs
-    val template = if (prefs.engine == "custom" && prefs.customUrl.isNotBlank()) prefs.customUrl
-    else (ENGINES[prefs.engine] ?: ENGINES.getValue("google")).second
-    val url = if ("%s" in template) template.replace("%s", encode(query)) else template + encode(query)
+    val custom = prefs.customUrl.takeIf { prefs.engine == "custom" && searchUrlProblem(it) == null }
+    val template = custom ?: (ENGINES[prefs.engine] ?: ENGINES.getValue("google")).second
+    val url = template.replace("%s", encode(query))
     start(Intent(Intent.ACTION_VIEW, url.toUri()))
 }
 
