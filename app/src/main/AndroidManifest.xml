@@ -62,19 +62,6 @@
             android:windowSoftInputMode="adjustResize" />
 
         <service
-            android:name=".PebblesWallpaper"
-            android:exported="true"
-            android:label="@string/wallpaper_label"
-            android:permission="android.permission.BIND_WALLPAPER">
-            <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.service.wallpaper"
-                android:resource="@xml/wallpaper" />
-        </service>
-
-        <service
             android:name=".BadgeService"
             android:exported="true"
             android:label="@string/badges_label"

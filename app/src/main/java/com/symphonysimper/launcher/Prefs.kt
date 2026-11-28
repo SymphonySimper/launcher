@@ -26,6 +26,8 @@ class Prefs(context: Context) {
     var wallpaperImages by bool("wallpaper_images", false)
     var sameImage by bool("same_image", false)
     var wallpaperVersion by int("wallpaper_version", 0)
+    var wallpaperId by int("wallpaper_id", 0)
+    var wallpaperShown by string("wallpaper_shown", "")
     var stayAwake by bool("stay_awake", false)
     var savedTimeout by int("saved_timeout", DEFAULT_TIMEOUT)
     var portraitOnly by bool("portrait_only", true)

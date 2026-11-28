@@ -190,9 +190,8 @@ Reuse these before building anything new.
   because the "checked" list item tints the whole row.
 - `AppListPage`: searchable app list with the search field at the bottom.
 - Wallpaper page controls: `RoundButton`, `PillGroup`, `SlotPicker`, `PillToggle`, `SourceButton`. The single
-  `primary` round button at the end of the bottom row is whatever needs doing: "Set wallpaper" (check)
-  while Pebbles isn't the wallpaper, or "Use on lock screen too" (lock) while the lock screen has its
-  own wallpaper. It hides once there's nothing to do.
+  `primary` round button at the end of the bottom row is "Set wallpaper" (check), shown while the
+  current wallpaper isn't the one the launcher set. It hides once it is.
 - A new settings page is a `Page` enum entry with its parent (back goes to the parent) and a case in
   `SettingsRoot`.
 - The main page is grouped by what a setting changes: **Wallpaper & style** (wallpaper, themed
@@ -259,15 +258,24 @@ every device. Turned off, they follow auto-rotate like any app. Layouts must sti
 
 ## Wallpaper
 
-Pebbles (`PebblesWallpaper.kt`, `object Pebbles`) is drawn in a 360×800 space scaled to cover the
-screen. The layout is a cascade: three pebbles fall from the top right to the bottom left, growing
+Pebbles (`Pebbles.kt`) is drawn in a 360×800 space scaled to cover the screen. The layout is a cascade: three pebbles fall from the top right to the bottom left, growing
 as they go, between a soft circle behind the clock and another bleeding off behind the dock, with two
 thin rings as accents. No dots. The shapes take the look of the Phone and Messages icons: a vertical
 fade from lavender (`top`) to bright blue (`bottom`), with a deeper blue copy (`back`) offset up and
 left behind each pebble. The fade runs straight down the screen however a shape is rotated. Light
-and dark palettes are kept in step, and `colors()` hands the blues to Material You. Only the soft
+and dark share the same blues; only the background and the soft circles change. Only the soft
 circles may sit behind the clock or the dock. Keep pebbles and rings clear of the clock text (check
 with the real font on the phone), the dock and the search bar.
+
+The launcher sets Pebbles, or the user's light and dark images, as an ordinary still wallpaper
+(`Wallpaper.kt`) and swaps it when the mode changes, as long as it's still the wallpaper the launcher
+set. The system then takes Material You colours from the image itself, which works the same with
+every maker's theming. It isn't a live wallpaper because Motorola's SystemUI ignores a live
+wallpaper's colours, so the phone's theme never followed Pebbles. Keep the main colour identical in light and dark: the system re-themes the
+phone, and relaunches whatever is on screen, whenever it changes. That's why the blues are shared and
+`back`, the flat blue the system picks, is drawn without anti-aliasing (blended edges shift it by a
+step). After changing the art, check that both modes report the same first colour in SystemUI's
+`ThemeOverlayController: got new colors` log line.
 
 ## Checking UI work
 

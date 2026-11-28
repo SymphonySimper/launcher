@@ -24,7 +24,7 @@ launcher fast, lean and idle when nothing is happening:
   After adding a screen or reworking a main path, extend `Journeys.kt` and regenerate with
   `./gradlew :app:generateBaselineProfile -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true`
   (the flag keeps Gradle from uninstalling the launcher and wiping its settings). It restarts the app,
-  so set the wallpaper and default home again afterwards. `LauncherBenchmarks` measures the gain.
+  so set the default home again afterwards. `LauncherBenchmarks` measures the gain.
 - **Back up the phone's settings before testing** anything that might reinstall or reset the
   launcher (baseline profile, benchmarks, connected tests), and restore them afterwards:
   `adb shell dumpsys activity com.symphonysimper.launcher/.MainActivity export-settings` prints the
@@ -32,8 +32,6 @@ launcher fast, lean and idle when nothing is happening:
   restores it. The launcher must be on screen for both. An uninstall also drops notification access
   for badges; give it back with
   `adb shell cmd notification allow_listener com.symphonysimper.launcher/com.symphonysimper.launcher.BadgeService`.
-- Don't use `setFixedSize` on the wallpaper surface: wallpapers must size from layout, and the crash
-  resets the user's wallpaper and default home app.
 
 ## Code
 

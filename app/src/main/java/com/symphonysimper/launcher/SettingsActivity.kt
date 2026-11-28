@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.core.view.WindowCompat
 import com.symphonysimper.launcher.ui.theme.isDark
-import android.app.WallpaperManager
 import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Intent
@@ -651,10 +650,10 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = LauncherApp.instance.prefs
     val notify = LocalNotify.current
-    val wallpapers = remember { context.getSystemService(WallpaperManager::class.java) }
-    var lockChanged by remember { mutableIntStateOf(0) }
-    val lockDiffers = remember(resumes, lockChanged) { wallpapers.getWallpaperId(WallpaperManager.FLAG_LOCK) >= 0 }
-    var showDark by rememberSaveable { mutableStateOf(PebblesWallpaper.isDark(context)) }
+    val wallpaper = LauncherApp.instance.wallpaper
+    val scope = rememberCoroutineScope()
+    val ours = remember(resumes, prefs.wallpaperId) { wallpaper.isOurs }
+    var showDark by rememberSaveable { mutableStateOf(context.isDarkMode()) }
     val images = prefs.wallpaperImages
     val linked = images && prefs.sameImage
     val slotDark = showDark && !linked
@@ -663,7 +662,7 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
         uri ?: return@rememberLauncherForActivityResult
         runCatching {
             context.contentResolver.openInputStream(uri)!!.use { input ->
-                PebblesWallpaper.wallpaperFile(context, slotDark).outputStream().use { input.copyTo(it) }
+                wallpaper.photo(slotDark).outputStream().use { input.copyTo(it) }
             }
         }.onSuccess {
             prefs.wallpaperVersion++
@@ -723,31 +722,14 @@ private fun WallpaperPage(resumes: Int, onBack: () -> Unit) {
                     RoundButton(Ic.edit, "$verb $what", size = Sizes.ControlLarge, shape = splitPill(start = false), onClick = pick)
                 }
             }
-            if (PebblesWallpaper.isActive && lockDiffers) {
-                // Removing the lock screen's own wallpaper makes it show home's again.
-                RoundButton(
-                    Ic.lock, "Use on lock screen too",
-                    size = Sizes.ControlLarge,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ) {
-                    runCatching { wallpapers.clear(WallpaperManager.FLAG_LOCK) }
-                        .onSuccess { notify("Lock screen now matches home") }
-                        .onFailure { notify("Couldn't change the lock screen") }
-                    lockChanged++
-                }
-            }
-            if (!PebblesWallpaper.isActive) {
+            if (!ours) {
                 RoundButton(
                     Ic.check, "Set wallpaper",
                     size = Sizes.ControlLarge,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ) {
-                    context.start(
-                        Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-                            .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(context, PebblesWallpaper::class.java)),
-                    )
+                    scope.launch { if (!wallpaper.set()) notify("Couldn't set the wallpaper") }
                 }
             }
         }
@@ -902,11 +884,10 @@ private sealed interface Preview {
 
 @Composable
 private fun rememberWallpaperImage(dark: Boolean, version: Int, size: IntSize): ImageBitmap? {
-    val context = LocalContext.current
     val image by produceState<ImageBitmap?>(null, version, dark, size) {
         value = withContext(Dispatchers.IO) {
-            val file = PebblesWallpaper.wallpaperFile(context, dark)
-            PebblesWallpaper.decodeSampled(file, size.width.coerceAtLeast(1), size.height.coerceAtLeast(1))?.asImageBitmap()
+            val file = LauncherApp.instance.wallpaper.photo(dark)
+            decodeSampled(file, size.width.coerceAtLeast(1), size.height.coerceAtLeast(1))?.asImageBitmap()
         }
     }
     return image

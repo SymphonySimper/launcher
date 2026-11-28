@@ -21,7 +21,7 @@
 - **Themed icons** in the dock and the drawer, the way Pixel does them.
 - **Hidden apps**, kept out of the drawer and search.
 - **Stay awake.** Long-press home to keep the screen on until you lock the phone.
-- **Pebbles,** a live wallpaper that matches light and dark mode. You can also pick your own images.
+- **Pebbles,** a wallpaper that switches with light and dark mode. You can also pick your own light and dark images.
 - **Back up and restore** your settings to a file.
 - **No internet access.** The launcher doesn't have the permission, so it can't track you or show ads.
 
