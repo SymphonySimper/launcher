@@ -39,9 +39,16 @@ const val WHATSAPP_MIME = "vnd.android.cursor.item/vnd.com.whatsapp.profile"
 
 fun Context.toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
 
-fun Context.start(intent: Intent, options: Bundle? = null) {
+private fun launchOptions(view: View? = null, bounds: Rect? = null): Bundle {
+    val options = if (view != null && bounds != null) {
+        ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height())
+    } else ActivityOptions.makeBasic()
+    return options.setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR).toBundle()
+}
+
+fun Context.start(intent: Intent) {
     try {
-        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
+        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), launchOptions())
     } catch (_: ActivityNotFoundException) {
         toast("No app can open this")
     } catch (_: SecurityException) {
@@ -49,28 +56,20 @@ fun Context.start(intent: Intent, options: Bundle? = null) {
     }
 }
 
-fun Context.startWithPlainSplash(intent: Intent) =
-    start(intent, ActivityOptions.makeBasic().setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR).toBundle())
-
 fun Context.launch(app: App, view: View? = null, bounds: Rect? = null) {
-    var options: Bundle? = null
-    var source: Rect? = null
-    if (view != null && bounds != null) {
-        options = ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height()).toBundle()
+    val source = if (view != null && bounds != null) {
         val origin = IntArray(2).also(view::getLocationOnScreen)
-        source = Rect(bounds).apply { offset(origin[0], origin[1]) }
-    }
+        Rect(bounds).apply { offset(origin[0], origin[1]) }
+    } else null
     try {
-        getSystemService(LauncherApps::class.java).startMainActivity(app.component, app.user, source, options)
+        getSystemService(LauncherApps::class.java).startMainActivity(app.component, app.user, source, launchOptions(view, bounds))
     } catch (_: Exception) {
         toast("Can't open ${app.label}")
     }
 }
 
 fun Context.open(intent: Intent, fallback: Intent?, view: View?, bounds: Rect?) {
-    val options = if (view != null && bounds != null) {
-        ActivityOptions.makeClipRevealAnimation(view, bounds.left, bounds.top, bounds.width(), bounds.height()).toBundle()
-    } else null
+    val options = launchOptions(view, bounds)
     for (candidate in listOfNotNull(intent, fallback)) {
         try {
             startActivity(candidate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)

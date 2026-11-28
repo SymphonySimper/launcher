@@ -151,7 +151,7 @@ private fun LauncherRoot(resetSignal: Int) {
             dock = dock,
             drawer = drawer,
             onLauncherSettings = {
-                context.startWithPlainSplash(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                context.start(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
             },
             onSystemSettings = { context.openSystemSettings() },
             modifier = Modifier.graphicsLayer {
