@@ -342,10 +342,11 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
             }
-            Group {
-                NavRow(0, 5, Ic.dock, "Dock") { open(Page.Dock) }
-                NavRow(1, 5, Ic.hide, "Hidden apps") { open(Page.Hidden) }
-                SwitchRow(2, 5, Ic.bell, "Notification badges", prefs.badges && badgeAccess, { on ->
+            Group("Wallpaper & style") {
+                NavRow(0, 4, Ic.image, "Wallpaper") { open(Page.Wallpaper) }
+                SwitchRow(1, 4, Ic.dock, "Themed dock icons", prefs.themedDock, { prefs.themedDock = it })
+                SwitchRow(2, 4, Ic.apps, "Themed drawer icons", prefs.themedDrawer, { prefs.themedDrawer = it })
+                SwitchRow(3, 4, Ic.bell, "Notification badges", prefs.badges && badgeAccess, { on ->
                     prefs.badges = on
                     if (on && !badgeAccess) {
                         context.start(
@@ -356,14 +357,11 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                         )
                     }
                 })
-                NavRow(3, 5, Ic.image, "Wallpaper") {
-                    open(Page.Wallpaper)
-                }
-                SwitchRow(4, 5, Ic.portrait, "Portrait only", prefs.portraitOnly, { prefs.portraitOnly = it })
             }
-            Group("Themed icons") {
-                SwitchRow(0, 2, Ic.dock, "Dock", prefs.themedDock, { prefs.themedDock = it })
-                SwitchRow(1, 2, Ic.apps, "App drawer", prefs.themedDrawer, { prefs.themedDrawer = it })
+            Group("Home & drawer") {
+                NavRow(0, 3, Ic.dock, "Dock") { open(Page.Dock) }
+                NavRow(1, 3, Ic.hide, "Hidden apps") { open(Page.Hidden) }
+                SwitchRow(2, 3, Ic.portrait, "Portrait only", prefs.portraitOnly, { prefs.portraitOnly = it })
             }
             Group("Search") {
                 NavRow(0, 3, Ic.globe, "Search engine") { open(Page.Engine) }
@@ -376,10 +374,13 @@ private fun MainPage(resumes: Int, open: (Page) -> Unit) {
                     }
                 })
             }
-            Group("More") {
-                NavRow(0, 3, Ic.download, "Back up settings") { export.launch("launcher-backup.json") }
-                NavRow(1, 3, Ic.upload, "Restore settings") { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
-                NavRow(2, 3, Ic.bug, "Report a bug") { context.reportBug() }
+            Group("Backup") {
+                NavRow(0, 2, Ic.download, "Back up settings") { export.launch("launcher-backup.json") }
+                NavRow(1, 2, Ic.upload, "Restore settings") { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+            }
+            Spacer(Modifier.height(24.dp))
+            Group {
+                NavRow(0, 1, Ic.bug, "Report a bug") { context.reportBug() }
             }
         }
     }

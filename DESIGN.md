@@ -195,6 +195,11 @@ Reuse these before building anything new.
   own wallpaper. It hides once there's nothing to do.
 - A new settings page is a `Page` enum entry with its parent (back goes to the parent) and a case in
   `SettingsRoot`.
+- The main page is grouped by what a setting changes: **Wallpaper & style** (wallpaper, themed
+  icons, badges), **Home & drawer** (dock, hidden apps, orientation), **Search**, **Backup**. A
+  one-off action that fits no group stands alone without a header: Set as default launcher at the
+  top (only while it isn't), Report a bug at the bottom. No catch-all "More" or "General" group, and
+  no two rows with the same title.
 
 **Feedback.** In settings, messages go through `LocalNotify` (a snackbar), not a toast. Toasts are
 only for failures in `Actions.kt`, which runs outside Compose.
