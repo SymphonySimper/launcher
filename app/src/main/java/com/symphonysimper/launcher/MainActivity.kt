@@ -159,12 +159,14 @@ private fun LauncherRoot(resetSignal: Int) {
                 translationY = -HomeLift.toPx() * p
                 scaleX = 1f - HomeShrink * p
                 scaleY = scaleX
+                // The open drawer covers home, and a layer at zero alpha isn't drawn at all.
+                alpha = if (p < 1f) 1f else 0f
             },
         )
         Box(
             Modifier.fillMaxSize().drawBehind {
                 val p = drawer.progress
-                if (p > 0f) drawRect(Color.Black, alpha = ScrimAlpha * p)
+                if (p > 0f && p < 1f) drawRect(Color.Black, alpha = ScrimAlpha * p)
             },
         )
         Box(
