@@ -34,16 +34,19 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +58,9 @@ import com.symphonysimper.launcher.ui.theme.Sizes
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun Home(
@@ -67,6 +73,16 @@ fun Home(
     var menuAt by remember { mutableStateOf<Offset?>(null) }
     val context = LocalContext.current
     var canPullShade by remember { mutableStateOf(false) }
+    var shadePulled by remember { mutableStateOf(false) }
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(shadePulled) {
+        if (!shadePulled) return@LaunchedEffect
+        // SystemUI opens the shade asynchronously, so for a moment after the call, swipes still land on
+        // home; it takes window focus once it's shown and hands it back when it closes.
+        withTimeoutOrNull(ShadeOpenTimeout) { snapshotFlow { windowInfo.isWindowFocused }.first { !it } }
+        snapshotFlow { windowInfo.isWindowFocused }.first { it }
+        shadePulled = false
+    }
     val stayAwake = rememberStayAwake()
     Box(
         modifier
@@ -80,10 +96,12 @@ fun Home(
                     // to start it the moment the swipe is known to be downward (past the touch slop).
                     if (canPullShade && dy > 0f) {
                         canPullShade = false
+                        shadePulled = true
                         context.expandNotifications()
                     }
                 },
                 Orientation.Vertical,
+                enabled = !shadePulled,
                 onDragStarted = { canPullShade = drawer.progress <= 0f },
                 onDragStopped = { drawer.release(it) },
             ),
@@ -135,6 +153,8 @@ fun Home(
         }
     }
 }
+
+private val ShadeOpenTimeout = 1.seconds
 
 private val ClockStart = 26.dp
 
