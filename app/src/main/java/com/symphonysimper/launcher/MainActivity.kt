@@ -77,8 +77,8 @@ class MainActivity : ComponentActivity() {
      * Backs up and restores settings from a computer, so testing that reinstalls the launcher can put
      * them back. Only adb and the system may call this (it needs the DUMP permission):
      *
-     *   adb shell dumpsys activity activity com.symphonysimper.launcher/.MainActivity export-settings > backup.json
-     *   adb shell dumpsys activity activity com.symphonysimper.launcher/.MainActivity import-settings $(base64 -w0 backup.json)
+     *   adb shell dumpsys activity com.symphonysimper.launcher/.MainActivity export-settings > backup.json
+     *   adb shell dumpsys activity com.symphonysimper.launcher/.MainActivity import-settings $(base64 -w0 backup.json)
      */
     override fun dump(prefix: String, fd: FileDescriptor?, writer: PrintWriter, args: Array<out String>?) {
         val prefs = LauncherApp.instance.prefs
