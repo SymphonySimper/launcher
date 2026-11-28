@@ -37,6 +37,10 @@ class Wallpaper(private val context: Context, private val prefs: Prefs) : Shared
 
     val isOurs get() = manager.getWallpaperId(FLAG_SYSTEM) == prefs.wallpaperId
 
+    fun showsPebbles(dark: Boolean) = prefs.wallpaperShown == pebblesKey(dark)
+
+    private fun pebblesKey(dark: Boolean) = "pebbles:$dark"
+
     fun photo(dark: Boolean) = File(context.filesDir, if (dark) "wallpaper_dark" else "wallpaper_light")
 
     fun follow() {
@@ -48,7 +52,7 @@ class Wallpaper(private val context: Context, private val prefs: Prefs) : Shared
     private fun show(takeover: Takeover) {
         val dark = context.isDarkMode()
         val photo = photo(dark && !prefs.sameImage).takeIf { prefs.wallpaperImages && it.exists() }
-        val shown = if (photo != null) "${photo.name}:${prefs.wallpaperVersion}" else "pebbles:$dark"
+        val shown = if (photo != null) "${photo.name}:${prefs.wallpaperVersion}" else pebblesKey(dark)
         if (takeover == Takeover.OnlyIfOurs && (shown == prefs.wallpaperShown || !isOurs)) return
         val which = if (manager.getWallpaperId(FLAG_LOCK) < 0) FLAG_SYSTEM or FLAG_LOCK else FLAG_SYSTEM
         val image = photo ?: pebbles(dark)

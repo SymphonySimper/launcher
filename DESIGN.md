@@ -277,6 +277,11 @@ phone, and relaunches whatever is on screen, whenever it changes. That's why the
 step). After changing the art, check that both modes report the same first colour in SystemUI's
 `ThemeOverlayController: got new colors` log line.
 
+When the mode flips on home, `WallpaperFade` fades the new Pebbles in over the old wallpaper with
+`slowEffectsSpec`, then removes itself once the system shows the same image. The system draws a still
+wallpaper at 110% on home, so the fade draws at that zoom too; if the pebbles jump at the end of a
+fade, the zoom no longer matches. Photos switch without a fade.
+
 ## Checking UI work
 
 - Install the release build (`./gradlew -q :app:installRelease`) and look at the change on the

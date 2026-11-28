@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import com.symphonysimper.launcher.ui.Drawer
 import com.symphonysimper.launcher.ui.Home
 import com.symphonysimper.launcher.ui.SearchField
+import com.symphonysimper.launcher.ui.WallpaperFade
 import com.symphonysimper.launcher.ui.rankApps
 import com.symphonysimper.launcher.ui.rememberContacts
 import com.symphonysimper.launcher.ui.rememberDrawerState
@@ -147,6 +148,7 @@ private fun LauncherRoot(resetSignal: Int) {
     }
 
     Box(Modifier.fillMaxSize().onSizeChanged { drawer.range = it.height.toFloat() }) {
+        WallpaperFade()
         Home(
             dock = dock,
             drawer = drawer,
